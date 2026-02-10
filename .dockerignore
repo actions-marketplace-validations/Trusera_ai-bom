@@ -8,6 +8,7 @@ build/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 tests/
@@ -17,3 +18,7 @@ tests/
 demo-video/
 .idea/
 .vscode/
+docs/
+.ai-bom-cache/
+node_modules/
+assets/

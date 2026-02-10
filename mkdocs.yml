@@ -1,0 +1,90 @@
+site_name: AI-BOM Documentation
+site_description: AI Bill of Materials — discover and inventory all AI/LLM components
+site_url: https://trusera.github.io/ai-bom/
+repo_url: https://github.com/trusera/ai-bom
+repo_name: trusera/ai-bom
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_bases: true
+            heading_level: 3
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quickstart.md
+    - Configuration: configuration.md
+  - Scanners:
+    - Overview: scanners/index.md
+    - Code Scanner: scanners/code.md
+    - Docker Scanner: scanners/docker.md
+    - Network Scanner: scanners/network.md
+    - Cloud Scanner: scanners/cloud.md
+    - n8n Scanner: scanners/n8n.md
+    - Jupyter Scanner: scanners/jupyter.md
+    - GitHub Actions Scanner: scanners/github-actions.md
+    - Model File Scanner: scanners/model-files.md
+    - MCP Config Scanner: scanners/mcp-config.md
+    - AST Scanner: scanners/ast.md
+  - Output Formats:
+    - Overview: outputs/index.md
+    - Table: outputs/table.md
+    - CycloneDX: outputs/cyclonedx.md
+    - SARIF: outputs/sarif.md
+    - SPDX 3.0: outputs/spdx3.md
+    - HTML: outputs/html.md
+    - CSV: outputs/csv.md
+    - JUnit: outputs/junit.md
+    - Markdown: outputs/markdown.md
+  - CI/CD Integration: ci-integration.md
+  - Policy Enforcement: policy.md
+  - Compliance:
+    - OWASP Agentic Top 10: compliance/owasp.md
+    - EU AI Act: compliance/eu-ai-act.md
+  - CLI Reference: cli-reference.md
+  - REST API: api.md
+  - Troubleshooting: troubleshooting.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true

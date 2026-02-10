@@ -143,7 +143,15 @@ class CodeScanner(BaseScanner):
         all_known_ai_deps = get_all_dep_names() | set(KNOWN_AI_PACKAGES.keys())
 
         # Find all dependency files
-        dep_files = self.iter_files(path, filenames=SCANNABLE_EXTENSIONS["deps"])
+        # Get files matching exact names from the list
+        dep_files_list = list(self.iter_files(path, filenames=SCANNABLE_EXTENSIONS["deps"]))
+
+        # Also find .csproj files (pattern matching) since they can have any name
+        for file_path in path.rglob("*.csproj"):
+            if file_path.is_file() and file_path not in dep_files_list:
+                dep_files_list.append(file_path)
+
+        dep_files = dep_files_list
 
         for dep_file in dep_files:
             filename = dep_file.name.lower()
@@ -167,6 +175,30 @@ class CodeScanner(BaseScanner):
                 declared_deps.update(
                     self._parse_package_json(content, all_known_ai_deps)
                 )
+            elif filename == "cargo.toml":
+                declared_deps.update(
+                    self._parse_cargo_toml(content, all_known_ai_deps)
+                )
+            elif filename == "go.mod":
+                declared_deps.update(
+                    self._parse_go_mod(content, all_known_ai_deps)
+                )
+            elif filename == "gemfile":
+                declared_deps.update(
+                    self._parse_gemfile(content, all_known_ai_deps)
+                )
+            elif filename == "pom.xml":
+                declared_deps.update(
+                    self._parse_pom_xml(content, all_known_ai_deps)
+                )
+            elif filename in ("build.gradle", "build.gradle.kts"):
+                declared_deps.update(
+                    self._parse_gradle(content, all_known_ai_deps)
+                )
+            elif filename.endswith(".csproj"):
+                declared_deps.update(
+                    self._parse_csproj(content, all_known_ai_deps)
+                )
 
         return declared_deps
 
@@ -184,6 +216,18 @@ class CodeScanner(BaseScanner):
             return self._parse_pyproject_toml(content, all_known_ai_deps)
         elif filename == "package.json":
             return self._parse_package_json(content, all_known_ai_deps)
+        elif filename == "cargo.toml":
+            return self._parse_cargo_toml(content, all_known_ai_deps)
+        elif filename == "go.mod":
+            return self._parse_go_mod(content, all_known_ai_deps)
+        elif filename == "gemfile":
+            return self._parse_gemfile(content, all_known_ai_deps)
+        elif filename == "pom.xml":
+            return self._parse_pom_xml(content, all_known_ai_deps)
+        elif filename in ("build.gradle", "build.gradle.kts"):
+            return self._parse_gradle(content, all_known_ai_deps)
+        elif filename.endswith(".csproj"):
+            return self._parse_csproj(content, all_known_ai_deps)
         return set()
 
     def _scan_single_source_file(
@@ -606,3 +650,242 @@ class CodeScanner(BaseScanner):
 
         # Default to LLM provider
         return ComponentType.llm_provider
+
+    def _parse_cargo_toml(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse Cargo.toml dependencies section (Rust).
+
+        Looks for dependencies like:
+        async-openai = "0.14"
+        anthropic-sdk = { version = "0.1" }
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+        in_deps_section = False
+
+        for line in content.splitlines():
+            line = line.strip()
+
+            # Detect [dependencies] section
+            if line.startswith("[dependencies"):
+                in_deps_section = True
+                continue
+
+            # Exit dependencies section when we hit another section
+            if in_deps_section and line.startswith("[") and "dependencies" not in line:
+                in_deps_section = False
+
+            # Parse dependency lines
+            if in_deps_section and "=" in line:
+                # Extract package name (before =)
+                package_name = line.split("=")[0].strip()
+
+                # Normalize: replace - with _ and vice versa
+                normalized_underscore = package_name.replace("-", "_")
+                normalized_dash = package_name.replace("_", "-")
+
+                if (
+                    package_name in known_deps
+                    or normalized_underscore in known_deps
+                    or normalized_dash in known_deps
+                ):
+                    found.add(package_name)
+
+        return found
+
+    def _parse_go_mod(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse go.mod require section (Go).
+
+        Looks for require statements like:
+        require github.com/sashabaranov/go-openai v1.5.0
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+
+        for line in content.splitlines():
+            line = line.strip()
+
+            # Match require lines
+            if line.startswith("require ") or (not line.startswith("//") and "/" in line):
+                # Extract package path
+                parts = line.split()
+                if len(parts) >= 2:
+                    package_path = parts[0] if parts[0] != "require" else parts[1]
+
+                    # Check if full path matches known deps
+                    if package_path in known_deps:
+                        found.add(package_path)
+
+        return found
+
+    def _parse_gemfile(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse Gemfile gem declarations (Ruby).
+
+        Looks for gem statements like:
+        gem 'ruby-openai'
+        gem "anthropic", "~> 0.1"
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+
+        # Match gem declarations
+        gem_pattern = r"gem\s+['\"]([a-zA-Z0-9_-]+)['\"]"
+
+        for match in re.finditer(gem_pattern, content):
+            gem_name = match.group(1)
+
+            # Normalize
+            normalized_underscore = gem_name.replace("-", "_")
+            normalized_dash = gem_name.replace("_", "-")
+
+            if (
+                gem_name in known_deps
+                or normalized_underscore in known_deps
+                or normalized_dash in known_deps
+            ):
+                found.add(gem_name)
+
+        return found
+
+    def _parse_pom_xml(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse pom.xml Maven dependencies (Java).
+
+        Looks for dependency elements like:
+        <dependency>
+            <groupId>com.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+        </dependency>
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+
+        # Extract groupId and artifactId pairs
+        group_id_pattern = r"<groupId>([^<]+)</groupId>"
+        artifact_id_pattern = r"<artifactId>([^<]+)</artifactId>"
+
+        lines = content.splitlines()
+        current_group_id = None
+
+        for line in lines:
+            line = line.strip()
+
+            # Match groupId
+            group_match = re.search(group_id_pattern, line)
+            if group_match:
+                current_group_id = group_match.group(1)
+
+            # Match artifactId
+            artifact_match = re.search(artifact_id_pattern, line)
+            if artifact_match and current_group_id:
+                artifact_id = artifact_match.group(1)
+
+                # Build full coordinate
+                full_name = f"{current_group_id}:{artifact_id}"
+
+                # Check if matches known deps
+                if full_name in known_deps or artifact_id in known_deps:
+                    found.add(full_name)
+
+                current_group_id = None  # Reset after matching
+
+        return found
+
+    def _parse_gradle(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse build.gradle or build.gradle.kts Gradle dependencies (Java/Kotlin).
+
+        Looks for implementation/compile statements like:
+        implementation 'com.langchain4j:langchain4j:0.27.0'
+        implementation("spring-ai:0.8.0")
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+
+        # Match implementation/compile lines for both Groovy and Kotlin DSL
+        # Groovy: implementation 'group:artifact:version'
+        # Kotlin: implementation("group:artifact:version")
+        dep_pattern = (
+            r"(?:implementation|compile|api|testImplementation)"
+            r"\s*(?:\()?['\"]([a-zA-Z0-9._:/-]+)"
+        )
+
+        for match in re.finditer(dep_pattern, content):
+            dep_string = match.group(1)
+
+            # Extract group:artifact from dep string
+            if ":" in dep_string:
+                # Full coordinate format (group:artifact:version or artifact:version)
+                parts = dep_string.split(":")
+
+                if len(parts) >= 2:
+                    # Check if it's full coordinate (group:artifact) or just (artifact:version)
+                    # If parts[0] is a known dep, it's artifact:version format
+                    if parts[0] in known_deps:
+                        # artifact:version format (e.g., spring-ai:0.8.0)
+                        found.add(parts[0])
+                    else:
+                        # group:artifact:version format (e.g., com.langchain4j:langchain4j:0.27.0)
+                        group_artifact = f"{parts[0]}:{parts[1]}"
+                        if group_artifact in known_deps or parts[1] in known_deps:
+                            found.add(group_artifact)
+            else:
+                # Just artifact name
+                if dep_string in known_deps:
+                    found.add(dep_string)
+
+        return found
+
+    def _parse_csproj(self, content: str, known_deps: set[str]) -> set[str]:
+        """Parse .csproj PackageReference elements (.NET).
+
+        Looks for PackageReference elements like:
+        <PackageReference Include="Azure.AI.OpenAI" Version="1.0.0" />
+        <PackageReference Include="Microsoft.SemanticKernel" Version="1.0.0" />
+
+        Args:
+            content: File content
+            known_deps: Set of known AI package names
+
+        Returns:
+            Set of found AI package names
+        """
+        found: set[str] = set()
+
+        # Match PackageReference Include attribute
+        package_pattern = r'<PackageReference\s+Include="([^"]+)"'
+
+        for match in re.finditer(package_pattern, content):
+            package_name = match.group(1)
+
+            if package_name in known_deps:
+                found.add(package_name)
+
+        return found

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 import shutil
 import sys
 import tempfile
@@ -11,7 +13,7 @@ import typer
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 from rich.text import Text
 
 from ai_bom import __version__
@@ -29,6 +31,25 @@ app = typer.Typer(
 )
 
 console = Console()
+logger = logging.getLogger("ai_bom")
+
+
+def _setup_logging(verbose: bool = False, debug: bool = False) -> None:
+    """Configure logging based on verbosity flags."""
+    if debug:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s %(name)s %(levelname)s %(message)s",
+            stream=sys.stderr,
+        )
+    elif verbose:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(name)s: %(message)s",
+            stream=sys.stderr,
+        )
+    else:
+        logging.basicConfig(level=logging.WARNING, stream=sys.stderr)
 
 
 def _print_banner() -> None:
@@ -158,7 +179,6 @@ def _save_to_dashboard(result: ScanResult, scan_duration: float, quiet: bool = F
 
     Uses lazy imports so the dashboard deps are not required for normal CLI usage.
     """
-    import json
     from uuid import uuid4
 
     try:
@@ -197,7 +217,7 @@ def scan(
     target: str = typer.Argument(".", help="Path to scan (file, directory, or git URL)"),
     format: str = typer.Option(
         "table", "--format", "-f",
-        help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3",
+        help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3, csv, junit",
     ),
     output: Optional[str] = typer.Option(
         None, "--output", "-o", help="Output file path",
@@ -220,6 +240,15 @@ def scan(
     quiet: bool = typer.Option(
         False, "--quiet", "-q", help="Suppress banner and progress (for CI)",
     ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show scanner details, file counts, and timing",
+    ),
+    debug: bool = typer.Option(
+        False, "--debug", help="Enable debug logging with full stack traces",
+    ),
+    config: Optional[str] = typer.Option(
+        None, "--config", help="Path to .ai-bom.yml config file",
+    ),
     save_dashboard: bool = typer.Option(
         False, "--save-dashboard", help="Save scan results to the dashboard database",
     ),
@@ -231,8 +260,26 @@ def scan(
         None, "--policy",
         help="Path to YAML policy file for CI/CD enforcement",
     ),
+    workers: int = typer.Option(
+        0, "--workers",
+        help="Number of parallel scanner workers (0 = sequential)",
+    ),
+    cache: bool = typer.Option(
+        False, "--cache/--no-cache",
+        help="Enable incremental scanning cache",
+    ),
 ) -> None:
     """Scan a directory or repository for AI/LLM components."""
+    # Setup logging
+    _setup_logging(verbose=verbose, debug=debug)
+
+    # Load config file if specified or auto-discover
+    if config or verbose:
+        from ai_bom.config_file import load_config
+        cfg = load_config(Path(config) if config else None)
+        if cfg and verbose:
+            console.print(f"[dim]Loaded config: {cfg}[/dim]")
+
     # Disable colors if requested
     if no_color:
         console.no_color = True
@@ -310,37 +357,80 @@ def scan(
 
             if format == "table" and not quiet:
                 console.print(f"[cyan]Scanning: {scan_path}[/cyan]")
+                if verbose:
+                    active = ', '.join(
+                        s.name for s in scanners
+                        if s.supports(scan_path)
+                    )
+                    console.print(
+                        f"[dim]Scanners: {active}[/dim]"
+                    )
                 console.print()
 
-            # Run scanners with progress indicator
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=console,
-                disable=(format != "table" or quiet),
-            ) as progress:
-                for scanner in scanners:
-                    # Check if scanner supports this path
-                    if not scanner.supports(scan_path):
-                        continue
+            # Optionally initialise the incremental cache
+            scan_cache = None
+            if cache:
+                from ai_bom.cache import ScanCache
+                scan_cache = ScanCache()
 
-                    task = progress.add_task(f"Running {scanner.name} scanner...", total=None)
+            if workers > 0:
+                # --- Parallel scanning ---
+                from ai_bom.scanners import run_scanners_parallel
 
-                    try:
-                        # Run scanner
-                        components = scanner.scan(scan_path)
+                if format == "table" and not quiet:
+                    console.print(f"[dim]Parallel scanning with {workers} workers[/dim]")
 
-                        # Apply risk scoring to each component
-                        for comp in components:
-                            comp.risk = score_component(comp)
+                components = run_scanners_parallel(scanners, scan_path, workers=workers)
+                for comp in components:
+                    comp.risk = score_component(comp)
+                result.components.extend(components)
+            else:
+                # --- Sequential scanning with progress indicator ---
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(bar_width=20),
+                    TaskProgressColumn(),
+                    console=console,
+                    disable=(format != "table" or quiet),
+                ) as progress:
+                    for scanner in scanners:
+                        # Check if scanner supports this path
+                        if not scanner.supports(scan_path):
+                            continue
 
-                        # Add components to result
-                        result.components.extend(components)
+                        scanner_start = time.time()
+                        task = progress.add_task(f"Running {scanner.name} scanner...", total=None)
 
-                    except Exception as e:
-                        console.print(f"[red]Error running {scanner.name} scanner: {e}[/red]")
+                        try:
+                            # Run scanner
+                            components = scanner.scan(scan_path)
 
-                    progress.update(task, completed=True)
+                            # Apply risk scoring to each component
+                            for comp in components:
+                                comp.risk = score_component(comp)
+
+                            # Add components to result
+                            result.components.extend(components)
+
+                            scanner_elapsed = time.time() - scanner_start
+                            if verbose and not quiet:
+                                console.print(
+                                    f"[dim]  {scanner.name}: "
+                                    f"{len(components)} component(s) "
+                                    f"in {scanner_elapsed:.2f}s[/dim]"
+                                )
+
+                        except Exception as e:
+                            if debug:
+                                logger.exception("Error in %s scanner", scanner.name)
+                            console.print(f"[red]Error running {scanner.name} scanner: {e}[/red]")
+
+                        progress.update(task, completed=True)
+
+            # Persist the incremental cache if enabled
+            if scan_cache is not None:
+                scan_cache.save()
 
         # Calculate scan duration
         end_time = time.time()
@@ -367,6 +457,10 @@ def scan(
             if format == "table" and not quiet:
                 console.print()
                 console.print(f"[green]Found {len(result.components)} AI/LLM component(s)[/green]")
+                if verbose:
+                    console.print(
+                        f"[dim]Scan completed in {result.summary.scan_duration_seconds:.2f}s[/dim]"
+                    )
                 console.print()
 
         # Get reporter and render output
@@ -387,6 +481,8 @@ def scan(
                 print(output_str)
 
         except Exception as e:
+            if debug:
+                logger.exception("Error generating report")
             console.print(f"[red]Error generating report: {e}[/red]")
             raise typer.Exit(1)
 
@@ -479,7 +575,7 @@ def scan_cloud(
     provider: str = typer.Argument(help="Cloud provider: aws, gcp, azure"),
     format: str = typer.Option(
         "table", "--format", "-f",
-        help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3",
+        help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3, csv, junit",
     ),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress banner and progress"),
@@ -609,10 +705,84 @@ def demo() -> None:
         n8n_api_key=None,
         n8n_local=False,
         quiet=False,
+        verbose=False,
+        debug=False,
+        config=None,
         save_dashboard=False,
         fail_on=None,
         policy=None,
+        workers=0,
+        cache=False,
     )
+
+
+@app.command(name="list-scanners")
+def list_scanners() -> None:
+    """List all registered scanners and their status."""
+    _print_banner()
+
+    scanners = get_all_scanners()
+    console.print(f"[bold]Registered scanners ({len(scanners)}):[/bold]")
+    console.print()
+
+    for scanner in scanners:
+        enabled = getattr(scanner, "enabled", True)
+        status = "[green]enabled[/green]" if enabled else "[yellow]disabled[/yellow]"
+        console.print(f"  [bold]{scanner.name}[/bold] - {scanner.description} ({status})")
+
+    console.print()
+    console.print("[dim]Use --deep to enable AST scanner for Python analysis.[/dim]")
+
+
+@app.command()
+def diff(
+    scan1: str = typer.Argument(help="Path to first scan JSON file"),
+    scan2: str = typer.Argument(help="Path to second scan JSON file"),
+    format: str = typer.Option(
+        "table", "--format", "-f", help="Output format: table, json, markdown",
+    ),
+) -> None:
+    """Compare two scan results and show differences."""
+    from ai_bom.reporters.diff_reporter import (
+        compare_scans,
+        format_diff_as_json,
+        format_diff_as_markdown,
+        format_diff_as_table,
+        load_scan_from_file,
+    )
+
+    try:
+        # Load both scan files
+        console.print(f"[cyan]Loading scan 1: {scan1}[/cyan]")
+        result1 = load_scan_from_file(scan1)
+
+        console.print(f"[cyan]Loading scan 2: {scan2}[/cyan]")
+        result2 = load_scan_from_file(scan2)
+
+        # Compare scans
+        console.print("[cyan]Comparing scans...[/cyan]")
+        diff_result = compare_scans(result1, result2)
+
+        # Format output
+        if format == "json":
+            output = format_diff_as_json(diff_result)
+        elif format == "markdown":
+            output = format_diff_as_markdown(diff_result)
+        else:  # table
+            output = format_diff_as_table(diff_result)
+
+        console.print()
+        print(output)
+
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -639,6 +809,100 @@ def dashboard(
 
     dash_app = create_app()
     uvicorn.run(dash_app, host=host, port=port, log_level="info")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", help="Host to bind"),
+    port: int = typer.Option(8080, help="Port to bind"),
+) -> None:
+    """Start the AI-BOM REST API server."""
+    try:
+        import uvicorn
+    except ImportError:
+        console.print(
+            "[red]Server dependencies not installed. "
+            "Install with: pip install ai-bom[server][/red]"
+        )
+        raise typer.Exit(1)
+
+    from ai_bom.server import create_server_app
+
+    _print_banner()
+    console.print(f"[cyan]Starting AI-BOM API server at http://{host}:{port}[/cyan]")
+    console.print("[dim]Press Ctrl+C to stop[/dim]")
+    console.print()
+
+    server_app = create_server_app()
+    uvicorn.run(server_app, host=host, port=port, log_level="info")
+
+
+@app.command()
+def watch(
+    target: str = typer.Argument(".", help="Directory to watch"),
+    format: str = typer.Option("table", "--format", "-f"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """Watch a directory for changes and re-scan automatically."""
+    try:
+        from watchdog.events import FileSystemEventHandler
+        from watchdog.observers import Observer
+    except ImportError:
+        console.print(
+            "[red]watchdog is not installed. Install it with: "
+            "pip install watchdog[/red]"
+        )
+        raise typer.Exit(1)
+
+    scan_path = Path(target).resolve()
+    if not scan_path.exists():
+        console.print(f"[red]Target path does not exist: {scan_path}[/red]")
+        raise typer.Exit(1)
+
+    _print_banner()
+    console.print(f"[cyan]Watching {scan_path} for changes... (Ctrl+C to stop)[/cyan]")
+    console.print()
+
+    class _Handler(FileSystemEventHandler):
+        def on_modified(self, event):  # noqa: ANN001
+            if event.is_directory:
+                return
+            console.print(f"[dim]Change detected: {event.src_path}[/dim]")
+            try:
+                scan(
+                    target=str(scan_path),
+                    format=format,
+                    output=None,
+                    deep=False,
+                    severity=None,
+                    no_color=False,
+                    n8n_url=None,
+                    n8n_api_key=None,
+                    n8n_local=False,
+                    quiet=True,
+                    verbose=verbose,
+                    debug=False,
+                    config=None,
+                    save_dashboard=False,
+                    fail_on=None,
+                    policy=None,
+                    workers=0,
+                    cache=False,
+                )
+            except SystemExit:
+                pass
+
+    observer = Observer()
+    observer.schedule(_Handler(), str(scan_path), recursive=True)
+    observer.start()
+    try:
+        import time as _time
+        while True:
+            _time.sleep(1)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Watch stopped by user.[/yellow]")
+        observer.stop()
+    observer.join()
 
 
 @app.command()

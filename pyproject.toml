@@ -12,12 +12,18 @@ requires-python = ">=3.10"
 authors = [
     { name = "Trusera", email = "info@trusera.dev" },
 ]
-keywords = ["ai", "bom", "security", "llm", "agents", "compliance", "n8n", "shadow-ai"]
+keywords = [
+    "ai", "bom", "security", "llm", "agents", "compliance",
+    "n8n", "shadow-ai", "sbom", "ai-security", "devsecops",
+    "mcp", "ai-agent", "cybersecurity",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -25,37 +31,56 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
 ]
 dependencies = [
-    "typer>=0.9.0",
-    "rich>=13.0.0",
-    "pydantic>=2.0.0",
-    "pyyaml>=6.0",
-    "gitpython>=3.1.0",
-    "requests>=2.28.0",
-    "tomli>=2.0.0; python_version<'3.11'",
+    "typer>=0.9.0,<1.0",
+    "rich>=13.0.0,<14.0",
+    "pydantic>=2.0.0,<3.0",
+    "pyyaml>=6.0,<7.0",
+    "gitpython>=3.1.0,<4.0",
+    "requests>=2.28.0,<3.0",
+    "pathspec>=0.11.0,<1.0",
+    "tomli>=2.0.0,<3.0; python_version<'3.11'",
 ]
 
 [project.optional-dependencies]
 dashboard = [
-    "fastapi>=0.100.0",
-    "uvicorn[standard]>=0.20.0",
+    "fastapi>=0.100.0,<1.0",
+    "uvicorn[standard]>=0.20.0,<1.0",
 ]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "ruff>=0.1.0",
+    "pytest>=7.0,<9.0",
+    "pytest-cov>=4.0,<6.0",
+    "ruff>=0.1.0,<1.0",
+    "mypy>=1.0,<2.0",
+    "pip-audit>=2.6.0,<3.0",
 ]
-aws = ["boto3>=1.26.0"]
-gcp = ["google-cloud-aiplatform>=1.38.0"]
-azure = ["azure-ai-ml>=1.11.0", "azure-identity>=1.12.0"]
+docs = [
+    "mkdocs>=1.5,<2.0",
+    "mkdocs-material>=9.0,<10.0",
+    "mkdocstrings[python]>=0.24,<1.0",
+]
+server = [
+    "fastapi>=0.100.0,<1.0",
+    "uvicorn[standard]>=0.20.0,<1.0",
+]
+watch = [
+    "watchdog>=3.0,<5.0",
+]
+aws = ["boto3>=1.26.0,<2.0"]
+gcp = ["google-cloud-aiplatform>=1.38.0,<2.0"]
+azure = ["azure-ai-ml>=1.11.0,<2.0", "azure-identity>=1.12.0,<2.0"]
 cloud-live = ["ai-bom[aws,gcp,azure]"]
+all = ["ai-bom[dashboard,docs,server,watch,cloud-live]"]
 
 [project.scripts]
 ai-bom = "ai_bom.cli:app"
 
 [project.urls]
 Homepage = "https://trusera.dev"
+Documentation = "https://trusera.github.io/ai-bom/"
 Repository = "https://github.com/trusera/ai-bom"
 Issues = "https://github.com/trusera/ai-bom/issues"
 Changelog = "https://github.com/trusera/ai-bom/blob/main/CHANGELOG.md"
@@ -78,6 +103,7 @@ exclude = [
     "*.mp4",
     "*.gif",
     "assets",
+    "docs",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -86,6 +112,9 @@ packages = ["src/ai_bom"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 [tool.ruff]
 target-version = "py310"
@@ -96,3 +125,21 @@ select = ["E", "F", "I", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "src/ai_bom/dashboard/frontend.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["tests/", "docs/"]
+
+[tool.coverage.run]
+source = ["ai_bom"]
+omit = ["*/dashboard/*", "*/demo_data/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_empty = true

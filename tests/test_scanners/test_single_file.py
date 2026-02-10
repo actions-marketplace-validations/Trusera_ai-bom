@@ -33,15 +33,15 @@ class TestSingleFileScanning:
         files = list(scanner.iter_files(f, extensions={".py"}))
         assert len(files) == 0
 
-    def test_single_file_over_1mb_rejected(self, scanner, tmp_path):
+    def test_single_file_over_10mb_rejected(self, scanner, tmp_path):
         f = tmp_path / "huge.py"
-        # Write just over 1MB
-        f.write_bytes(b"# padding\n" * 120_000)
-        assert os.path.getsize(f) > 1_048_576
+        # Write just over 10MB
+        f.write_bytes(b"# padding\n" * 1_200_000)
+        assert os.path.getsize(f) > 10_485_760
         files = list(scanner.iter_files(f, extensions={".py"}))
         assert len(files) == 0
 
-    def test_single_file_under_1mb_accepted(self, scanner, tmp_path):
+    def test_single_file_under_10mb_accepted(self, scanner, tmp_path):
         f = tmp_path / "small.py"
         f.write_text("x = 1\n")
         files = list(scanner.iter_files(f, extensions={".py"}))

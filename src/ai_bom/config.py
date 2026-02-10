@@ -134,6 +134,19 @@ KNOWN_AI_PACKAGES: Dict[str, Tuple[str, str]] = {
     "@langchain/google-genai": ("LangChain", "orchestration"),
     "@langchain/openai": ("LangChain", "orchestration"),
     "@langchain/anthropic": ("LangChain", "orchestration"),
+
+    # Ruby AI packages
+    "ruby-openai": ("OpenAI", "completion"),
+
+    # .NET AI packages
+    "Azure.AI.OpenAI": ("Azure OpenAI", "completion"),
+    "Microsoft.SemanticKernel": ("Microsoft", "orchestration"),
+    "Mscc.GenerativeAI": ("Google", "completion"),
+
+    # Java/Gradle AI packages
+    "com.langchain4j:langchain4j": ("LangChain4j", "orchestration"),
+    "spring-ai": ("Spring AI", "orchestration"),
+    "com.openai:openai-java": ("OpenAI", "completion"),
 }
 
 # =============================================================================
@@ -261,7 +274,10 @@ KNOWN_MODEL_PATTERNS: List[Tuple[str, str]] = [
 API_KEY_PATTERNS: List[Tuple[str, str]] = [
     # OpenAI (sk-proj- keys allow hyphens, must check before generic sk- pattern)
     (r"sk-proj-[a-zA-Z0-9_-]{20,}", "OpenAI"),
-    (r"sk-[a-zA-Z0-9]{20,}", "OpenAI"),
+    # Note: DeepSeek also uses sk- prefix, causing overlap with OpenAI pattern
+    # The sk-[a-zA-Z0-9]{20,} pattern below will match both OpenAI and DeepSeek keys
+    # Additional context heuristics may be needed to distinguish between them
+    (r"sk-[a-zA-Z0-9]{20,}", "OpenAI/DeepSeek"),
 
     # Anthropic
     (r"sk-ant-[a-zA-Z0-9-]{20,}", "Anthropic"),
@@ -283,6 +299,18 @@ API_KEY_PATTERNS: List[Tuple[str, str]] = [
 
     # Google
     (r"AIza[a-zA-Z0-9_-]{20,}", "Google"),
+
+    # Fireworks
+    (r"fw_[a-zA-Z0-9]{20,}", "Fireworks"),
+
+    # Perplexity
+    (r"pplx-[a-zA-Z0-9]{20,}", "Perplexity"),
+
+    # Together AI (64-char hex string)
+    (r"[a-f0-9]{64}", "Together"),
+
+    # Mistral (32-char alphanumeric)
+    (r"[a-zA-Z0-9]{32}", "Mistral"),
 ]
 
 # =============================================================================
@@ -478,6 +506,7 @@ SCANNABLE_EXTENSIONS: Dict[str, Set[str]] = {
         "Gemfile",
         "pom.xml",
         "build.gradle",
+        "build.gradle.kts",
     },
 }
 

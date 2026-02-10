@@ -60,6 +60,7 @@ class RiskAssessment(BaseModel):
     score: int = Field(ge=0, le=100, default=0)
     severity: Severity = Severity.low
     factors: list[str] = Field(default_factory=list)
+    owasp_categories: list[str] = Field(default_factory=list)
 
 
 class AIComponent(BaseModel):

@@ -1,0 +1,44 @@
+name: New Detection Pattern
+description: Request support for detecting a new AI tool, framework, or pattern
+labels: ["detection-pattern"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Tool/Framework Name
+      description: Name of the AI tool or framework to detect
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Detection Type
+      options:
+        - Python import/package
+        - JavaScript/TypeScript package
+        - Java/Maven dependency
+        - Go module
+        - Rust crate
+        - Docker image
+        - API endpoint
+        - API key pattern
+        - Model file format
+        - Config file pattern
+        - Other
+
+  - type: textarea
+    id: patterns
+    attributes:
+      label: Detection Patterns
+      description: What imports, packages, or patterns should we look for?
+      placeholder: |
+        Package name: example-ai
+        Import: from example_ai import Client
+        API key pattern: eai_xxxxx
+
+  - type: input
+    id: website
+    attributes:
+      label: Website/Docs URL
+      description: Link to the tool's documentation
