@@ -28,8 +28,7 @@ def create_server_app() -> Any:
         from pydantic import BaseModel
     except ImportError as e:
         raise ImportError(
-            "Server dependencies not installed. "
-            "Install with: pip install ai-bom[server]"
+            "Server dependencies not installed. Install with: pip install ai-bom[server]"
         ) from e
 
     app = FastAPI(
@@ -88,6 +87,7 @@ def create_server_app() -> Any:
         scanners = get_all_scanners()
         if request.deep:
             from ai_bom.scanners.ast_scanner import ASTScanner
+
             for s in scanners:
                 if isinstance(s, ASTScanner):
                     s.enabled = True
@@ -111,7 +111,8 @@ def create_server_app() -> Any:
             severity_order = {"critical": 4, "high": 3, "medium": 2, "low": 1}
             min_level = severity_order.get(request.severity.lower(), 0)
             result.components = [
-                c for c in result.components
+                c
+                for c in result.components
                 if severity_order.get(c.risk.severity.value, 0) >= min_level
             ]
             result.build_summary()

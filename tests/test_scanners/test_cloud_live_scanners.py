@@ -147,14 +147,18 @@ class TestAWSLiveScanner:
         from ai_bom.scanners.aws_live_scanner import AWSLiveScanner
 
         mock_boto3 = _make_aws_clients(
-            endpoints=[{
-                "EndpointName": "my-model-endpoint",
-                "EndpointArn": "arn:aws:sagemaker:us-east-1:123:endpoint/my-model-endpoint",
-            }],
-            models=[{
-                "ModelName": "my-model",
-                "ModelArn": "arn:aws:sagemaker:us-east-1:123:model/my-model",
-            }],
+            endpoints=[
+                {
+                    "EndpointName": "my-model-endpoint",
+                    "EndpointArn": "arn:aws:sagemaker:us-east-1:123:endpoint/my-model-endpoint",
+                }
+            ],
+            models=[
+                {
+                    "ModelName": "my-model",
+                    "ModelArn": "arn:aws:sagemaker:us-east-1:123:model/my-model",
+                }
+            ],
         )
 
         with (

@@ -87,9 +87,7 @@ class ASTScanner(BaseScanner):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _analyse_tree(
-        self, tree: ast.Module, file_path: Path, source: str
-    ) -> list[AIComponent]:
+    def _analyse_tree(self, tree: ast.Module, file_path: Path, source: str) -> list[AIComponent]:
         components: list[AIComponent] = []
         components.extend(self._detect_imports(tree, file_path))
         components.extend(self._detect_decorators(tree, file_path))
@@ -99,9 +97,7 @@ class ASTScanner(BaseScanner):
 
     # -- imports --------------------------------------------------------
 
-    def _detect_imports(
-        self, tree: ast.Module, file_path: Path
-    ) -> list[AIComponent]:
+    def _detect_imports(self, tree: ast.Module, file_path: Path) -> list[AIComponent]:
         components: list[AIComponent] = []
         seen: set[str] = set()
 
@@ -145,13 +141,9 @@ class ASTScanner(BaseScanner):
 
     # -- decorators -----------------------------------------------------
 
-    def _detect_decorators(
-        self, tree: ast.Module, file_path: Path
-    ) -> list[AIComponent]:
+    def _detect_decorators(self, tree: ast.Module, file_path: Path) -> list[AIComponent]:
         components: list[AIComponent] = []
-        decorator_names = {
-            k.lstrip("@"): v for k, v in CREWAI_FLOW_PATTERNS.items()
-        }
+        decorator_names = {k.lstrip("@"): v for k, v in CREWAI_FLOW_PATTERNS.items()}
 
         for node in ast.walk(tree):
             if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -190,9 +182,7 @@ class ASTScanner(BaseScanner):
 
     # -- API calls ------------------------------------------------------
 
-    def _detect_api_calls(
-        self, tree: ast.Module, file_path: Path
-    ) -> list[AIComponent]:
+    def _detect_api_calls(self, tree: ast.Module, file_path: Path) -> list[AIComponent]:
         components: list[AIComponent] = []
         seen: set[str] = set()
 
@@ -226,9 +216,7 @@ class ASTScanner(BaseScanner):
 
     # -- model strings --------------------------------------------------
 
-    def _detect_model_strings(
-        self, tree: ast.Module, file_path: Path
-    ) -> list[AIComponent]:
+    def _detect_model_strings(self, tree: ast.Module, file_path: Path) -> list[AIComponent]:
         components: list[AIComponent] = []
         seen: set[str] = set()
 

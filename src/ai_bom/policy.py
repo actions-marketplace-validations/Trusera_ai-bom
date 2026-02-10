@@ -61,9 +61,7 @@ def load_policy(path: str | Path) -> Policy:
     return Policy(**data)
 
 
-def evaluate_policy(
-    result: ScanResult, policy: Policy
-) -> tuple[bool, list[str]]:
+def evaluate_policy(result: ScanResult, policy: Policy) -> tuple[bool, list[str]]:
     """Evaluate a scan result against a policy.
 
     Args:
@@ -111,8 +109,7 @@ def evaluate_policy(
         for component in result.components:
             if component.provider.lower() in blocked_lower:
                 violations.append(
-                    f"Blocked provider '{component.provider}' found "
-                    f"in component '{component.name}'"
+                    f"Blocked provider '{component.provider}' found in component '{component.name}'"
                 )
 
     # Check blocked flags
@@ -121,9 +118,6 @@ def evaluate_policy(
         for component in result.components:
             matching_flags = blocked_flags_set.intersection(component.flags)
             for flag in matching_flags:
-                violations.append(
-                    f"Blocked flag '{flag}' found in component "
-                    f"'{component.name}'"
-                )
+                violations.append(f"Blocked flag '{flag}' found in component '{component.name}'")
 
     return (len(violations) == 0, violations)

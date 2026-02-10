@@ -1,4 +1,5 @@
 """GitHub-Flavored Markdown reporter."""
+
 from __future__ import annotations
 
 from ai_bom.models import ScanResult
@@ -32,9 +33,7 @@ class MarkdownReporter(BaseReporter):
         lines.append("|--------|-------|")
         lines.append(f"| Total Components | {result.summary.total_components} |")
         lines.append(f"| Files Scanned | {result.summary.total_files_scanned} |")
-        lines.append(
-            f"| Highest Risk | {result.summary.highest_risk_score}/100 |"
-        )
+        lines.append(f"| Highest Risk | {result.summary.highest_risk_score}/100 |")
         lines.append("")
 
         # Component type breakdown
@@ -68,9 +67,7 @@ class MarkdownReporter(BaseReporter):
         if result.n8n_workflows:
             lines.append("## n8n Workflows")
             lines.append("")
-            lines.append(
-                "| Workflow | Trigger | AI Nodes | Agent Chains |"
-            )
+            lines.append("| Workflow | Trigger | AI Nodes | Agent Chains |")
             lines.append("|----------|---------|----------|--------------|")
             for wf in result.n8n_workflows:
                 lines.append(
@@ -93,12 +90,8 @@ class MarkdownReporter(BaseReporter):
         lines.append("## Components")
         lines.append("")
         if result.components:
-            lines.append(
-                "| # | Component | Type | Provider | Risk | Severity | Location | Flags |"
-            )
-            lines.append(
-                "|---|-----------|------|----------|------|----------|----------|-------|"
-            )
+            lines.append("| # | Component | Type | Provider | Risk | Severity | Location | Flags |")
+            lines.append("|---|-----------|------|----------|------|----------|----------|-------|")
             for i, comp in enumerate(
                 sorted(result.components, key=lambda c: c.risk.score, reverse=True),
                 1,
@@ -126,9 +119,7 @@ class MarkdownReporter(BaseReporter):
             lines.append("")
             for severity in ["critical", "high", "medium", "low"]:
                 severity_components = [
-                    c
-                    for c in result.components
-                    if c.risk.severity.value == severity
+                    c for c in result.components if c.risk.severity.value == severity
                 ]
                 if severity_components:
                     emoji = severity_emojis.get(severity, "⚪")
@@ -143,13 +134,9 @@ class MarkdownReporter(BaseReporter):
                         lines.append(f"- **Type:** {comp.type.value}")
                         lines.append(f"- **Provider:** {comp.provider}")
                         lines.append(f"- **Risk Score:** {comp.risk.score}/100")
-                        lines.append(
-                            f"- **Location:** `{comp.location.file_path}`"
-                        )
+                        lines.append(f"- **Location:** `{comp.location.file_path}`")
                         if comp.location.line_number:
-                            lines.append(
-                                f"  - Line: {comp.location.line_number}"
-                            )
+                            lines.append(f"  - Line: {comp.location.line_number}")
                         if comp.flags:
                             lines.append(f"- **Flags:** {', '.join(comp.flags)}")
                         if comp.version:
@@ -197,9 +184,7 @@ class MarkdownReporter(BaseReporter):
         lines.append("## Security Best Practices")
         lines.append("")
         lines.append("1. **API Key Management**")
-        lines.append(
-            "   - Store all API keys in environment variables or secrets managers"
-        )
+        lines.append("   - Store all API keys in environment variables or secrets managers")
         lines.append("   - Rotate keys regularly")
         lines.append("   - Use separate keys for dev/staging/production")
         lines.append("")

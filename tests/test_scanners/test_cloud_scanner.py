@@ -50,19 +50,16 @@ class TestCloudScanner:
     def test_detects_gcp_reasoning_engine(self, scanner, fixtures_dir):
         components = scanner.scan(fixtures_dir / "sample_terraform.tf")
         gcp_agents = [
-            c for c in components
-            if c.provider == "Google Vertex AI"
-            and c.type == ComponentType.agent_framework
+            c
+            for c in components
+            if c.provider == "Google Vertex AI" and c.type == ComponentType.agent_framework
         ]
         assert len(gcp_agents) >= 1
         assert "reasoning_engine" in gcp_agents[0].name
 
     def test_detects_bedrock_guardrail(self, scanner, fixtures_dir):
         components = scanner.scan(fixtures_dir / "sample_terraform.tf")
-        guardrails = [
-            c for c in components
-            if "guardrail" in c.name.lower()
-        ]
+        guardrails = [c for c in components if "guardrail" in c.name.lower()]
         assert len(guardrails) >= 1
         assert guardrails[0].provider == "AWS Bedrock"
         assert guardrails[0].type == ComponentType.tool
@@ -82,9 +79,7 @@ class TestCloudScanner:
 
     def test_workflow_usage_type(self, scanner, fixtures_dir):
         components = scanner.scan(fixtures_dir / "sample_terraform.tf")
-        workflow_components = [
-            c for c in components if c.type == ComponentType.workflow
-        ]
+        workflow_components = [c for c in components if c.type == ComponentType.workflow]
         assert len(workflow_components) >= 1
         for c in workflow_components:
             assert c.usage_type == UsageType.orchestration
@@ -100,8 +95,7 @@ class TestCloudScanner:
     def test_detects_sagemaker_pipeline(self, scanner, fixtures_dir):
         components = scanner.scan(fixtures_dir / "sample_terraform.tf")
         pipelines = [
-            c for c in components
-            if "pipeline" in c.name.lower() and "SageMaker" in c.provider
+            c for c in components if "pipeline" in c.name.lower() and "SageMaker" in c.provider
         ]
         assert len(pipelines) >= 1
         assert pipelines[0].type == ComponentType.workflow

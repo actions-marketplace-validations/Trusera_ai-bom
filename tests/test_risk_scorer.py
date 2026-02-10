@@ -1,4 +1,5 @@
 """Tests for risk scoring engine."""
+
 from ai_bom.models import AIComponent, ComponentType, Severity, SourceLocation
 from ai_bom.utils.risk_scorer import score_component
 
@@ -43,17 +44,28 @@ class TestScoreComponent:
         assert len(risk.factors) == 3
 
     def test_score_capped_at_100(self):
-        comp = _make_component(flags=[
-            "hardcoded_api_key", "shadow_ai", "internet_facing",
-            "multi_agent_no_trust", "no_auth", "deprecated_model"
-        ])
+        comp = _make_component(
+            flags=[
+                "hardcoded_api_key",
+                "shadow_ai",
+                "internet_facing",
+                "multi_agent_no_trust",
+                "no_auth",
+                "deprecated_model",
+            ]
+        )
         risk = score_component(comp)
         assert risk.score == 100
 
     def test_critical_severity(self):
-        comp = _make_component(flags=[
-            "hardcoded_api_key", "shadow_ai", "internet_facing", "no_auth",
-        ])
+        comp = _make_component(
+            flags=[
+                "hardcoded_api_key",
+                "shadow_ai",
+                "internet_facing",
+                "no_auth",
+            ]
+        )
         risk = score_component(comp)
         assert risk.score >= 76
         assert risk.severity == Severity.critical
@@ -94,8 +106,14 @@ class TestScoreComponent:
         )
         assert result.severity == Severity.high
         # Critical: 76-100
-        result = score_component(_make_component(flags=[
-            "hardcoded_api_key", "shadow_ai",
-            "internet_facing", "no_auth",
-        ]))
+        result = score_component(
+            _make_component(
+                flags=[
+                    "hardcoded_api_key",
+                    "shadow_ai",
+                    "internet_facing",
+                    "no_auth",
+                ]
+            )
+        )
         assert result.severity == Severity.critical

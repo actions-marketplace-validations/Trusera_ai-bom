@@ -9,6 +9,7 @@ import pytest
 
 try:
     from fastapi.testclient import TestClient
+
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
@@ -22,6 +23,7 @@ def _db_path(tmp_path: Path):
     db_path = tmp_path / "test_api.db"
     with patch("ai_bom.dashboard.db.DB_PATH", db_path):
         from ai_bom.dashboard.db import init_db
+
         init_db(db_path=db_path)
         yield db_path
 
@@ -30,6 +32,7 @@ def _db_path(tmp_path: Path):
 def client(_db_path: Path):
     """Create a TestClient for the dashboard app."""
     from ai_bom.dashboard import create_app
+
     app = create_app()
     return TestClient(app)
 
@@ -45,10 +48,20 @@ def _scan_payload(scan_id: str = "test-scan-001", target: str = "/home/user/proj
             "highest_risk_score": 75,
         },
         "components": [
-            {"name": "openai", "type": "llm_provider", "provider": "openai",
-             "risk": {"score": 75, "severity": "high"}, "location": {"file_path": "app.py"}},
-            {"name": "gpt-4", "type": "model", "provider": "openai",
-             "risk": {"score": 30, "severity": "low"}, "location": {"file_path": "app.py"}},
+            {
+                "name": "openai",
+                "type": "llm_provider",
+                "provider": "openai",
+                "risk": {"score": 75, "severity": "high"},
+                "location": {"file_path": "app.py"},
+            },
+            {
+                "name": "gpt-4",
+                "type": "model",
+                "provider": "openai",
+                "risk": {"score": 30, "severity": "low"},
+                "location": {"file_path": "app.py"},
+            },
         ],
         "scan_duration": 1.5,
         "ai_bom_version": "0.1.0",
@@ -133,10 +146,20 @@ class TestCompareScans:
         # Second scan has different components
         payload_b = _scan_payload("scan-b", "/path/b")
         payload_b["components"] = [
-            {"name": "openai", "type": "llm_provider", "provider": "openai",
-             "risk": {"score": 75, "severity": "high"}, "location": {"file_path": "app.py"}},
-            {"name": "anthropic", "type": "llm_provider", "provider": "anthropic",
-             "risk": {"score": 60, "severity": "medium"}, "location": {"file_path": "bot.py"}},
+            {
+                "name": "openai",
+                "type": "llm_provider",
+                "provider": "openai",
+                "risk": {"score": 75, "severity": "high"},
+                "location": {"file_path": "app.py"},
+            },
+            {
+                "name": "anthropic",
+                "type": "llm_provider",
+                "provider": "anthropic",
+                "risk": {"score": 60, "severity": "medium"},
+                "location": {"file_path": "bot.py"},
+            },
         ]
         client.post("/api/scans", json=payload_b)
 

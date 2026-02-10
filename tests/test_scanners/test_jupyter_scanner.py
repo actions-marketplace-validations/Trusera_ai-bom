@@ -312,7 +312,7 @@ def test_scan_sentence_transformers(tmp_path, scanner):
                 "source": (
                     "from sentence_transformers"
                     " import SentenceTransformer\n"
-                    'model = SentenceTransformer('
+                    "model = SentenceTransformer("
                     '"all-MiniLM-L6-v2")'
                 ),
             }
@@ -325,9 +325,7 @@ def test_scan_sentence_transformers(tmp_path, scanner):
 
     assert len(components) >= 1
     st_components = [
-        c for c in components
-        if "sentence" in c.name.lower()
-        or c.provider == "HuggingFace"
+        c for c in components if "sentence" in c.name.lower() or c.provider == "HuggingFace"
     ]
     assert len(st_components) >= 1
 
@@ -342,7 +340,7 @@ def test_scan_google_genai(tmp_path, scanner):
                 "cell_type": "code",
                 "source": (
                     "import google.generativeai as genai\n"
-                    'model = genai.GenerativeModel('
+                    "model = genai.GenerativeModel("
                     '"gemini-pro")'
                 ),
             }

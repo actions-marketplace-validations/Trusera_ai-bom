@@ -1,4 +1,5 @@
 """Self-contained HTML reporter with dark theme."""
+
 from __future__ import annotations
 
 from ai_bom.models import ScanResult
@@ -63,13 +64,17 @@ class HTMLReporter(BaseReporter):
             """
             )
 
-        components_table = "".join(component_rows) if component_rows else """
+        components_table = (
+            "".join(component_rows)
+            if component_rows
+            else """
             <tr>
                 <td colspan="8" style="text-align: center; color: var(--low);">
                     No AI components detected
                 </td>
             </tr>
         """
+        )
 
         # Build n8n section if present
         n8n_section = ""
@@ -99,7 +104,7 @@ class HTMLReporter(BaseReporter):
                         </tr>
                     </thead>
                     <tbody>
-                        {''.join(n8n_rows)}
+                        {"".join(n8n_rows)}
                     </tbody>
                 </table>
             </section>
@@ -391,16 +396,16 @@ class HTMLReporter(BaseReporter):
         <h2>Risk Distribution</h2>
         <div class="risk-bar">
             <div class="risk-segment risk-critical" title="Critical: {critical_count}">
-                {critical_count if critical_count > 0 else ''}
+                {critical_count if critical_count > 0 else ""}
             </div>
             <div class="risk-segment risk-high" title="High: {high_count}">
-                {high_count if high_count > 0 else ''}
+                {high_count if high_count > 0 else ""}
             </div>
             <div class="risk-segment risk-medium" title="Medium: {medium_count}">
-                {medium_count if medium_count > 0 else ''}
+                {medium_count if medium_count > 0 else ""}
             </div>
             <div class="risk-segment risk-low" title="Low: {low_count}">
-                {low_count if low_count > 0 else ''}
+                {low_count if low_count > 0 else ""}
             </div>
         </div>
         <p style="color: #8b949e; font-size: 0.9rem;">

@@ -88,13 +88,9 @@ class N8nWorkflowInfo(BaseModel):
     workflow_name: str
     workflow_id: str = ""
     nodes: list[str] = Field(default_factory=list)  # node type names
-    connections: dict[str, list[str]] = Field(
-        default_factory=dict
-    )  # node -> connected nodes
+    connections: dict[str, list[str]] = Field(default_factory=dict)  # node -> connected nodes
     trigger_type: str = ""
-    agent_chains: list[list[str]] = Field(
-        default_factory=list
-    )  # chains of agent node names
+    agent_chains: list[list[str]] = Field(default_factory=list)  # chains of agent node names
 
 
 class ScanSummary(BaseModel):
@@ -113,12 +109,8 @@ class ScanResult(BaseModel):
     """Complete scan result with components, workflows, and summary."""
 
     target_path: str
-    scan_timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
-    ai_bom_version: str = Field(
-        default_factory=lambda: __import__("ai_bom").__version__
-    )
+    scan_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    ai_bom_version: str = Field(default_factory=lambda: __import__("ai_bom").__version__)
     components: list[AIComponent] = Field(default_factory=list)
     n8n_workflows: list[N8nWorkflowInfo] = Field(default_factory=list)
     summary: ScanSummary = Field(default_factory=ScanSummary)
@@ -130,9 +122,7 @@ class ScanResult(BaseModel):
         # Count by type
         for component in self.components:
             component_type = component.type.value
-            self.summary.by_type[component_type] = (
-                self.summary.by_type.get(component_type, 0) + 1
-            )
+            self.summary.by_type[component_type] = self.summary.by_type.get(component_type, 0) + 1
 
         # Count by provider
         for component in self.components:
@@ -144,9 +134,7 @@ class ScanResult(BaseModel):
         # Count by severity
         for component in self.components:
             severity = component.risk.severity.value
-            self.summary.by_severity[severity] = (
-                self.summary.by_severity.get(severity, 0) + 1
-            )
+            self.summary.by_severity[severity] = self.summary.by_severity.get(severity, 0) + 1
 
         # Count unique files scanned
         unique_files = set()
@@ -183,14 +171,10 @@ class ScanResult(BaseModel):
             properties = []
 
             # Add risk score
-            properties.append(
-                {"name": "trusera:risk_score", "value": str(component.risk.score)}
-            )
+            properties.append({"name": "trusera:risk_score", "value": str(component.risk.score)})
 
             # Add usage type
-            properties.append(
-                {"name": "trusera:usage_type", "value": component.usage_type.value}
-            )
+            properties.append({"name": "trusera:usage_type", "value": component.usage_type.value})
 
             # Add source location
             location_str = component.location.file_path
@@ -200,9 +184,7 @@ class ScanResult(BaseModel):
 
             # Add provider if present
             if component.provider:
-                properties.append(
-                    {"name": "trusera:provider", "value": component.provider}
-                )
+                properties.append({"name": "trusera:provider", "value": component.provider})
 
             # Add risk factors if present
             if component.risk.factors:
@@ -215,15 +197,11 @@ class ScanResult(BaseModel):
 
             # Add flags if present
             if component.flags:
-                properties.append(
-                    {"name": "trusera:flags", "value": ", ".join(component.flags)}
-                )
+                properties.append({"name": "trusera:flags", "value": ", ".join(component.flags)})
 
             # Add model name if present
             if component.model_name:
-                properties.append(
-                    {"name": "trusera:model_name", "value": component.model_name}
-                )
+                properties.append({"name": "trusera:model_name", "value": component.model_name})
 
             # Add source
             if component.source:

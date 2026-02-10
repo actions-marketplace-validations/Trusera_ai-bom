@@ -92,9 +92,7 @@ class CodeScanner(BaseScanner):
         # Create components for declared dependencies
         for dep_name in declared_deps:
             # Look up provider and usage type
-            provider, usage_type_str = KNOWN_AI_PACKAGES.get(
-                dep_name, ("Unknown", "unknown")
-            )
+            provider, usage_type_str = KNOWN_AI_PACKAGES.get(dep_name, ("Unknown", "unknown"))
 
             # Map usage_type string to enum
             usage_type = self._map_usage_type(usage_type_str)
@@ -119,13 +117,9 @@ class CodeScanner(BaseScanner):
         # Phase B: Source code scan
         if path.is_file() and path.suffix in SCANNABLE_EXTENSIONS["code"]:
             # Single file mode: scan just this file
-            source_components = self._scan_single_source_file(
-                path, declared_deps, seen_components
-            )
+            source_components = self._scan_single_source_file(path, declared_deps, seen_components)
         else:
-            source_components = self._scan_source_files(
-                scan_dir, declared_deps, seen_components
-            )
+            source_components = self._scan_source_files(scan_dir, declared_deps, seen_components)
         components.extend(source_components)
 
         return components
@@ -164,41 +158,23 @@ class CodeScanner(BaseScanner):
 
             # Parse based on file type
             if filename == "requirements.txt" or filename == "pipfile":
-                declared_deps.update(
-                    self._parse_requirements_format(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_requirements_format(content, all_known_ai_deps))
             elif filename == "pyproject.toml":
-                declared_deps.update(
-                    self._parse_pyproject_toml(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_pyproject_toml(content, all_known_ai_deps))
             elif filename == "package.json":
-                declared_deps.update(
-                    self._parse_package_json(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_package_json(content, all_known_ai_deps))
             elif filename == "cargo.toml":
-                declared_deps.update(
-                    self._parse_cargo_toml(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_cargo_toml(content, all_known_ai_deps))
             elif filename == "go.mod":
-                declared_deps.update(
-                    self._parse_go_mod(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_go_mod(content, all_known_ai_deps))
             elif filename == "gemfile":
-                declared_deps.update(
-                    self._parse_gemfile(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_gemfile(content, all_known_ai_deps))
             elif filename == "pom.xml":
-                declared_deps.update(
-                    self._parse_pom_xml(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_pom_xml(content, all_known_ai_deps))
             elif filename in ("build.gradle", "build.gradle.kts"):
-                declared_deps.update(
-                    self._parse_gradle(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_gradle(content, all_known_ai_deps))
             elif filename.endswith(".csproj"):
-                declared_deps.update(
-                    self._parse_csproj(content, all_known_ai_deps)
-                )
+                declared_deps.update(self._parse_csproj(content, all_known_ai_deps))
 
         return declared_deps
 
@@ -262,12 +238,8 @@ class CodeScanner(BaseScanner):
                 )
                 components.append(component)
             for pat in LLM_PATTERNS:
-                import_matched = any(
-                    re.search(ip, line) for ip in pat.import_patterns
-                )
-                usage_matched = any(
-                    re.search(up, line) for up in pat.usage_patterns
-                )
+                import_matched = any(re.search(ip, line) for ip in pat.import_patterns)
+                usage_matched = any(re.search(up, line) for up in pat.usage_patterns)
                 if import_matched or usage_matched:
                     if pat.sdk_name in file_seen_sdks:
                         continue
@@ -302,9 +274,7 @@ class CodeScanner(BaseScanner):
                     components.append(component)
         return components
 
-    def _parse_requirements_format(
-        self, content: str, known_deps: set[str]
-    ) -> set[str]:
+    def _parse_requirements_format(self, content: str, known_deps: set[str]) -> set[str]:
         """Parse requirements.txt or Pipfile format.
 
         Format: package==version or package>=version or just package
@@ -426,9 +396,7 @@ class CodeScanner(BaseScanner):
         components: list[AIComponent] = []
 
         # Find all source code files
-        source_files = self.iter_files(
-            path, extensions=SCANNABLE_EXTENSIONS["code"]
-        )
+        source_files = self.iter_files(path, extensions=SCANNABLE_EXTENSIONS["code"])
 
         for source_file in source_files:
             try:
@@ -472,8 +440,7 @@ class CodeScanner(BaseScanner):
 
                     # Check usage patterns
                     usage_matched = any(
-                        re.search(usage_pattern, line)
-                        for usage_pattern in pattern.usage_patterns
+                        re.search(usage_pattern, line) for usage_pattern in pattern.usage_patterns
                     )
 
                     if import_matched or usage_matched:
@@ -517,9 +484,7 @@ class CodeScanner(BaseScanner):
                         file_seen_sdks.add(pattern.sdk_name)
 
                         # Check for shadow AI
-                        is_shadow_ai = not self._is_declared(
-                            pattern.dep_names, declared_deps
-                        )
+                        is_shadow_ai = not self._is_declared(pattern.dep_names, declared_deps)
 
                         # Extract model name if pattern supports it
                         model_name = ""
@@ -628,9 +593,7 @@ class CodeScanner(BaseScanner):
         }
         return mapping.get(usage_type_str, UsageType.unknown)
 
-    def _determine_component_type(
-        self, provider: str, usage_type_str: str
-    ) -> ComponentType:
+    def _determine_component_type(self, provider: str, usage_type_str: str) -> ComponentType:
         """Determine component type based on provider and usage.
 
         Args:

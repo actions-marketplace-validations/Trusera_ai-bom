@@ -1,4 +1,5 @@
 """Reporter modules for AI-BOM scan output."""
+
 from ai_bom.reporters.base import BaseReporter
 from ai_bom.reporters.cli_reporter import CLIReporter
 from ai_bom.reporters.csv_reporter import CSVReporter

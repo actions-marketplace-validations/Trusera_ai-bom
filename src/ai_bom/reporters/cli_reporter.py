@@ -1,4 +1,5 @@
 """Rich-based CLI reporter for terminal output."""
+
 from __future__ import annotations
 
 import io

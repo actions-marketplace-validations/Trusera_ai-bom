@@ -19,6 +19,7 @@ from ai_bom.scanners.n8n_scanner import N8nScanner
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def client() -> N8nAPIClient:
     return N8nAPIClient("http://localhost:5678", "test-api-key")
@@ -39,11 +40,7 @@ SAMPLE_WORKFLOW = {
             "parameters": {"model": "gpt-4"},
         },
     ],
-    "connections": {
-        "Agent": {
-            "main": [[{"node": "OpenAI Chat", "type": "main", "index": 0}]]
-        }
-    },
+    "connections": {"Agent": {"main": [[{"node": "OpenAI Chat", "type": "main", "index": 0}]]}},
 }
 
 
@@ -59,6 +56,7 @@ def _mock_response(json_data, status_code=200):
 # ---------------------------------------------------------------------------
 # N8nAPIClient unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestN8nAPIClientInit:
     def test_strips_trailing_slash(self):
@@ -108,32 +106,24 @@ class TestListWorkflows:
 
 class TestGetWorkflow:
     def test_returns_workflow(self, client: N8nAPIClient):
-        with patch.object(
-            client.session, "request", return_value=_mock_response(SAMPLE_WORKFLOW)
-        ):
+        with patch.object(client.session, "request", return_value=_mock_response(SAMPLE_WORKFLOW)):
             wf = client.get_workflow("wf1")
         assert wf["name"] == "AI Chat Bot"
 
 
 class TestErrorHandling:
     def test_auth_error_401(self, client: N8nAPIClient):
-        with patch.object(
-            client.session, "request", return_value=_mock_response({}, 401)
-        ):
+        with patch.object(client.session, "request", return_value=_mock_response({}, 401)):
             with pytest.raises(N8nAuthError, match="Authentication failed"):
                 client.list_workflows()
 
     def test_auth_error_403(self, client: N8nAPIClient):
-        with patch.object(
-            client.session, "request", return_value=_mock_response({}, 403)
-        ):
+        with patch.object(client.session, "request", return_value=_mock_response({}, 403)):
             with pytest.raises(N8nAuthError, match="Authentication failed"):
                 client.list_workflows()
 
     def test_server_error_500(self, client: N8nAPIClient):
-        with patch.object(
-            client.session, "request", return_value=_mock_response({}, 500)
-        ):
+        with patch.object(client.session, "request", return_value=_mock_response({}, 500)):
             with pytest.raises(N8nAPIError, match="HTTP 500"):
                 client.list_workflows()
 
@@ -168,6 +158,7 @@ class TestErrorHandling:
 # ---------------------------------------------------------------------------
 # scan_from_api integration (with mocked API)
 # ---------------------------------------------------------------------------
+
 
 class TestScanFromApi:
     def test_extracts_components_from_api(self):

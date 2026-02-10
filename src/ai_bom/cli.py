@@ -159,7 +159,8 @@ def _filter_by_severity(
     # Filter components by severity
     original_count = len(result.components)
     result.components = [
-        comp for comp in result.components
+        comp
+        for comp in result.components
         if severity_order.get(comp.risk.severity.value, 0) >= min_level
     ]
 
@@ -216,56 +217,85 @@ def _save_to_dashboard(result: ScanResult, scan_duration: float, quiet: bool = F
 def scan(
     target: str = typer.Argument(".", help="Path to scan (file, directory, or git URL)"),
     format: str = typer.Option(
-        "table", "--format", "-f",
+        "table",
+        "--format",
+        "-f",
         help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3, csv, junit",
     ),
     output: Optional[str] = typer.Option(
-        None, "--output", "-o", help="Output file path",
+        None,
+        "--output",
+        "-o",
+        help="Output file path",
     ),
     deep: bool = typer.Option(
-        False, "--deep", help="Enable deep AST-based Python analysis",
+        False,
+        "--deep",
+        help="Enable deep AST-based Python analysis",
     ),
     severity: Optional[str] = typer.Option(
-        None, "--severity", "-s",
+        None,
+        "--severity",
+        "-s",
         help="Minimum severity: critical, high, medium, low",
     ),
     no_color: bool = typer.Option(
-        False, "--no-color", help="Disable colored output",
+        False,
+        "--no-color",
+        help="Disable colored output",
     ),
     n8n_url: Optional[str] = typer.Option(
-        None, "--n8n-url", help="n8n instance URL for live scanning",
+        None,
+        "--n8n-url",
+        help="n8n instance URL for live scanning",
     ),
     n8n_api_key: Optional[str] = typer.Option(None, "--n8n-api-key", help="n8n API key"),
     n8n_local: bool = typer.Option(False, "--n8n-local", help="Scan local ~/.n8n/ directory"),
     quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress banner and progress (for CI)",
+        False,
+        "--quiet",
+        "-q",
+        help="Suppress banner and progress (for CI)",
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Show scanner details, file counts, and timing",
+        False,
+        "--verbose",
+        "-v",
+        help="Show scanner details, file counts, and timing",
     ),
     debug: bool = typer.Option(
-        False, "--debug", help="Enable debug logging with full stack traces",
+        False,
+        "--debug",
+        help="Enable debug logging with full stack traces",
     ),
     config: Optional[str] = typer.Option(
-        None, "--config", help="Path to .ai-bom.yml config file",
+        None,
+        "--config",
+        help="Path to .ai-bom.yml config file",
     ),
     save_dashboard: bool = typer.Option(
-        False, "--save-dashboard", help="Save scan results to the dashboard database",
+        False,
+        "--save-dashboard",
+        help="Save scan results to the dashboard database",
     ),
     fail_on: Optional[str] = typer.Option(
-        None, "--fail-on",
+        None,
+        "--fail-on",
         help="Exit code 1 if severity threshold met: critical, high, medium, low",
     ),
     policy: Optional[str] = typer.Option(
-        None, "--policy",
+        None,
+        "--policy",
         help="Path to YAML policy file for CI/CD enforcement",
     ),
     workers: int = typer.Option(
-        0, "--workers",
+        0,
+        "--workers",
         help="Number of parallel scanner workers (0 = sequential)",
     ),
     cache: bool = typer.Option(
-        False, "--cache/--no-cache",
+        False,
+        "--cache/--no-cache",
         help="Enable incremental scanning cache",
     ),
 ) -> None:
@@ -276,6 +306,7 @@ def scan(
     # Load config file if specified or auto-discover
     if config or verbose:
         from ai_bom.config_file import load_config
+
         cfg = load_config(Path(config) if config else None)
         if cfg and verbose:
             console.print(f"[dim]Loaded config: {cfg}[/dim]")
@@ -330,9 +361,7 @@ def scan(
             try:
                 components = n8n_scanner.scan_from_api(client)
             except N8nAuthError:
-                console.print(
-                    "[red]Authentication failed. Check your n8n API key.[/red]"
-                )
+                console.print("[red]Authentication failed. Check your n8n API key.[/red]")
                 raise typer.Exit(1)
             except N8nConnectionError as exc:
                 console.print(f"[red]Cannot connect to n8n: {exc}[/red]")
@@ -358,19 +387,15 @@ def scan(
             if format == "table" and not quiet:
                 console.print(f"[cyan]Scanning: {scan_path}[/cyan]")
                 if verbose:
-                    active = ', '.join(
-                        s.name for s in scanners
-                        if s.supports(scan_path)
-                    )
-                    console.print(
-                        f"[dim]Scanners: {active}[/dim]"
-                    )
+                    active = ", ".join(s.name for s in scanners if s.supports(scan_path))
+                    console.print(f"[dim]Scanners: {active}[/dim]")
                 console.print()
 
             # Optionally initialise the incremental cache
             scan_cache = None
             if cache:
                 from ai_bom.cache import ScanCache
+
                 scan_cache = ScanCache()
 
             if workers > 0:
@@ -538,9 +563,7 @@ def scan(
                         )
                     else:
                         console.print()
-                        console.print(
-                            f"[red]POLICY VIOLATIONS ({len(violations)}):[/red]"
-                        )
+                        console.print(f"[red]POLICY VIOLATIONS ({len(violations)}):[/red]")
                         for v in violations:
                             console.print(f"  [red]- {v}[/red]")
                 elif not quiet and format == "table":
@@ -565,16 +588,16 @@ def scan(
             try:
                 shutil.rmtree(scan_path)
             except Exception as e:
-                console.print(
-                    f"[yellow]Warning: Failed to clean up temp directory: {e}[/yellow]"
-                )
+                console.print(f"[yellow]Warning: Failed to clean up temp directory: {e}[/yellow]")
 
 
 @app.command(name="scan-cloud")
 def scan_cloud(
     provider: str = typer.Argument(help="Cloud provider: aws, gcp, azure"),
     format: str = typer.Option(
-        "table", "--format", "-f",
+        "table",
+        "--format",
+        "-f",
         help="Output format: table, cyclonedx, json, html, markdown, sarif, spdx3, csv, junit",
     ),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path"),
@@ -590,8 +613,7 @@ def scan_cloud(
     scanner_name = provider_map.get(provider)
     if scanner_name is None:
         console.print(
-            f"[red]Unknown cloud provider: {provider}. "
-            f"Choose from: {', '.join(provider_map)}[/red]"
+            f"[red]Unknown cloud provider: {provider}. Choose from: {', '.join(provider_map)}[/red]"
         )
         raise typer.Exit(1)
 
@@ -631,7 +653,8 @@ def scan_cloud(
             disable=(format != "table" or quiet),
         ) as progress:
             task = progress.add_task(
-                f"Running {live_scanner.name} scanner...", total=None,
+                f"Running {live_scanner.name} scanner...",
+                total=None,
             )
             components = live_scanner.scan(Path("."))
             for comp in components:
@@ -650,15 +673,11 @@ def scan_cloud(
     if not result.components:
         if format == "table" and not quiet:
             console.print()
-            console.print(
-                f"[green]No AI/ML services found in {provider.upper()} account.[/green]"
-            )
+            console.print(f"[green]No AI/ML services found in {provider.upper()} account.[/green]")
     else:
         if format == "table" and not quiet:
             console.print()
-            console.print(
-                f"[green]Found {len(result.components)} AI/ML service(s)[/green]"
-            )
+            console.print(f"[green]Found {len(result.components)} AI/ML service(s)[/green]")
             console.print()
 
     try:
@@ -739,7 +758,10 @@ def diff(
     scan1: str = typer.Argument(help="Path to first scan JSON file"),
     scan2: str = typer.Argument(help="Path to second scan JSON file"),
     format: str = typer.Option(
-        "table", "--format", "-f", help="Output format: table, json, markdown",
+        "table",
+        "--format",
+        "-f",
+        help="Output format: table, json, markdown",
     ),
 ) -> None:
     """Compare two scan results and show differences."""
@@ -821,8 +843,7 @@ def serve(
         import uvicorn
     except ImportError:
         console.print(
-            "[red]Server dependencies not installed. "
-            "Install with: pip install ai-bom[server][/red]"
+            "[red]Server dependencies not installed. Install with: pip install ai-bom[server][/red]"
         )
         raise typer.Exit(1)
 
@@ -848,10 +869,7 @@ def watch(
         from watchdog.events import FileSystemEventHandler
         from watchdog.observers import Observer
     except ImportError:
-        console.print(
-            "[red]watchdog is not installed. Install it with: "
-            "pip install watchdog[/red]"
-        )
+        console.print("[red]watchdog is not installed. Install it with: pip install watchdog[/red]")
         raise typer.Exit(1)
 
     scan_path = Path(target).resolve()
@@ -897,6 +915,7 @@ def watch(
     observer.start()
     try:
         import time as _time
+
         while True:
             _time.sleep(1)
     except KeyboardInterrupt:

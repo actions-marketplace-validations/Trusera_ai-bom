@@ -14,8 +14,20 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 WATCH_EXTENSIONS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go", ".rs",
-    ".yml", ".yaml", ".json", ".toml", ".tf", ".ipynb",
+    ".py",
+    ".js",
+    ".ts",
+    ".jsx",
+    ".tsx",
+    ".java",
+    ".go",
+    ".rs",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".tf",
+    ".ipynb",
 }
 
 
@@ -36,8 +48,7 @@ def watch_and_scan(
         from watchdog.observers import Observer
     except ImportError:
         raise ImportError(
-            "Watch mode requires the watchdog library. "
-            "Install with: pip install ai-bom[watch]"
+            "Watch mode requires the watchdog library. Install with: pip install ai-bom[watch]"
         )
 
     class _ChangeHandler(FileSystemEventHandler):

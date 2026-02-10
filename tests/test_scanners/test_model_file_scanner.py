@@ -1,6 +1,5 @@
 """Tests for model file scanner."""
 
-
 import pytest
 
 from ai_bom.models import ComponentType

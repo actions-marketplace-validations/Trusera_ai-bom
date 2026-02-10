@@ -87,9 +87,7 @@ def run_scanners_parallel(
         return results
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        future_to_scanner = {
-            executor.submit(s.scan, path): s for s in supported
-        }
+        future_to_scanner = {executor.submit(s.scan, path): s for s in supported}
         for future in as_completed(future_to_scanner):
             scanner = future_to_scanner[future]
             try:

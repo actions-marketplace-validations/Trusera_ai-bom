@@ -1,4 +1,5 @@
 """Tests for SPDX 3.0 JSON-LD reporter with AI Profile extensions."""
+
 import json
 
 from ai_bom.models import (
@@ -212,9 +213,7 @@ class TestRiskAssessmentMapping:
             name="risky-model",
             type=ComponentType.model,
             location=SourceLocation(file_path="m.py"),
-            risk=RiskAssessment(
-                score=85, severity=Severity.critical, factors=["no_guardrails"]
-            ),
+            risk=RiskAssessment(score=85, severity=Severity.critical, factors=["no_guardrails"]),
         )
         result = ScanResult(target_path="/test")
         result.components = [comp]

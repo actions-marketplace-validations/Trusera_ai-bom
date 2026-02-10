@@ -17,15 +17,12 @@ KNOWN_AI_PACKAGES: Dict[str, Tuple[str, str]] = {
     # OpenAI
     "openai": ("OpenAI", "completion"),
     "tiktoken": ("OpenAI", "tool_use"),
-
     # Anthropic
     "anthropic": ("Anthropic", "completion"),
-
     # Google AI
     "google.generativeai": ("Google", "completion"),
     "google-generativeai": ("Google", "completion"),
     "vertexai": ("Google", "completion"),
-
     # LangChain Ecosystem
     "langchain": ("LangChain", "orchestration"),
     "langchain_core": ("LangChain", "orchestration"),
@@ -37,112 +34,85 @@ KNOWN_AI_PACKAGES: Dict[str, Tuple[str, str]] = {
     "langchain-community": ("LangChain", "orchestration"),
     "langchain_google_genai": ("LangChain", "orchestration"),
     "langchain-google-genai": ("LangChain", "orchestration"),
-
     # LangGraph
     "langgraph": ("LangGraph", "orchestration"),
-
     # LlamaIndex
     "llama_index": ("LlamaIndex", "orchestration"),
     "llama-index": ("LlamaIndex", "orchestration"),
-
     # CrewAI
     "crewai": ("CrewAI", "agent"),
-
     # AutoGen
     "autogen": ("AutoGen", "agent"),
     "pyautogen": ("AutoGen", "agent"),
-
     # HuggingFace
     "transformers": ("HuggingFace", "completion"),
     "huggingface_hub": ("HuggingFace", "completion"),
     "diffusers": ("HuggingFace", "completion"),
     "sentence_transformers": ("HuggingFace", "embedding"),
     "sentence-transformers": ("HuggingFace", "embedding"),
-
     # Ollama
     "ollama": ("Ollama", "completion"),
-
     # Cohere
     "cohere": ("Cohere", "completion"),
-
     # Mistral
     "mistralai": ("Mistral", "completion"),
-
     # Replicate
     "replicate": ("Replicate", "completion"),
-
     # Together AI
     "together": ("Together", "completion"),
-
     # vLLM
     "vllm": ("vLLM", "completion"),
-
     # Vector Databases / Embedding Stores
     "chromadb": ("ChromaDB", "embedding"),
     "pinecone": ("Pinecone", "embedding"),
     "pinecone-client": ("Pinecone", "embedding"),
     "weaviate-client": ("Weaviate", "embedding"),
     "qdrant-client": ("Qdrant", "embedding"),
-
     # Model Context Protocol
     "mcp": ("MCP", "tool_use"),
-
     # Agent-to-Agent
     "a2a": ("A2A", "agent"),
     "a2a-sdk": ("A2A", "agent"),
-
     # Google Agent Development Kit
     "google.adk": ("Google", "agent"),
     "google-adk": ("Google", "agent"),
-
     # DeepSeek
     "deepseek": ("DeepSeek", "completion"),
-
     # AWS Bedrock
     "boto3": ("AWS", "completion"),  # Special: requires additional bedrock service check
-
     # LiteLLM
     "litellm": ("LiteLLM", "completion"),
-
     # Microsoft
     "guidance": ("Microsoft", "completion"),
     "semantic_kernel": ("Microsoft", "orchestration"),
     "semantic-kernel": ("Microsoft", "orchestration"),
-
     # DSPy
     "dspy": ("DSPy", "orchestration"),
     "dspy-ai": ("DSPy", "orchestration"),
-
     # Java AI SDKs
     "com.theokanning.openai": ("OpenAI", "completion"),
     "dev.langchain4j": ("LangChain4j", "orchestration"),
     "dev.langchain4j.model.openai": ("LangChain4j", "orchestration"),
     "dev.langchain4j.model.anthropic": ("LangChain4j", "orchestration"),
-
     # Go AI SDKs
     "github.com/sashabaranov/go-openai": ("OpenAI", "completion"),
     "github.com/anthropics/anthropic-sdk-go": ("Anthropic", "completion"),
-
     # Rust AI SDKs
     "async_openai": ("OpenAI", "completion"),
     "async-openai": ("OpenAI", "completion"),
     "anthropic_sdk": ("Anthropic", "completion"),
     "anthropic-sdk": ("Anthropic", "completion"),
-
     # JavaScript/TypeScript AI SDKs (npm packages)
     "@anthropic-ai/sdk": ("Anthropic", "completion"),
     "@langchain/google-genai": ("LangChain", "orchestration"),
     "@langchain/openai": ("LangChain", "orchestration"),
     "@langchain/anthropic": ("LangChain", "orchestration"),
-
     # Ruby AI packages
     "ruby-openai": ("OpenAI", "completion"),
-
     # .NET AI packages
     "Azure.AI.OpenAI": ("Azure OpenAI", "completion"),
     "Microsoft.SemanticKernel": ("Microsoft", "orchestration"),
     "Mscc.GenerativeAI": ("Google", "completion"),
-
     # Java/Gradle AI packages
     "com.langchain4j:langchain4j": ("LangChain4j", "orchestration"),
     "spring-ai": ("Spring AI", "orchestration"),
@@ -159,37 +129,27 @@ KNOWN_AI_ENDPOINTS: List[Tuple[str, str, str]] = [
     # OpenAI
     (r"api\.openai\.com", "OpenAI", "completion"),
     (r"openai\.azure\.com", "Azure OpenAI", "completion"),
-
     # Anthropic
     (r"api\.anthropic\.com", "Anthropic", "completion"),
-
     # Google
     (r"generativelanguage\.googleapis\.com", "Google", "completion"),
     (r"aiplatform\.googleapis\.com", "Google Vertex AI", "completion"),
-
     # Cohere
     (r"api\.cohere\.ai", "Cohere", "completion"),
-
     # Mistral
     (r"api\.mistral\.ai", "Mistral", "completion"),
-
     # Replicate
     (r"api\.replicate\.com", "Replicate", "completion"),
-
     # Together AI
     (r"api\.together\.xyz", "Together", "completion"),
-
     # HuggingFace
     (r"api-inference\.huggingface\.co", "HuggingFace", "completion"),
     (r"huggingface\.co/api", "HuggingFace", "completion"),
-
     # AWS Bedrock
     (r"bedrock-runtime\..*\.amazonaws\.com", "AWS Bedrock", "completion"),
-
     # Ollama (local)
     (r"localhost:11434", "Ollama", "completion"),
     (r"127\.0\.0\.1:11434", "Ollama", "completion"),
-
     # Agent-to-Agent (A2A)
     (r"a2a\.googleapis\.com", "Google A2A", "agent"),
 ]
@@ -210,57 +170,44 @@ KNOWN_MODEL_PATTERNS: List[Tuple[str, str]] = [
     (r"text-ada-\d+", "OpenAI"),
     (r"code-davinci-\d+", "OpenAI"),
     (r"code-cushman-\d+", "OpenAI"),
-
     # OpenAI Embeddings
     (r"text-embedding-\w+-\d+", "OpenAI"),
-
     # OpenAI Audio/Vision
     (r"dall-e-\d+", "OpenAI"),
     (r"whisper-\d+", "OpenAI"),
     (r"tts-\d+(-\w+)*", "OpenAI"),
-
     # Anthropic Claude
     (r"claude-3-\w+(-\w+)*", "Anthropic"),
     (r"claude-2(\.\d+)?", "Anthropic"),
     (r"claude-instant-\d+(\.\d+)?", "Anthropic"),
-
     # Google Models
     (r"gemini-\w+(-\w+)*", "Google"),
     (r"palm-\d+", "Google"),
     (r"bison-\w+", "Google"),
-
     # Cohere
     (r"command-\w+(-\w+)*", "Cohere"),
     (r"embed-\w+(-\w+)*", "Cohere"),
-
     # Mistral
     (r"mistral-\w+(-\w+)*", "Mistral"),
     (r"mixtral-\w+(-\w+)*", "Mistral"),
-
     # Meta LLaMA
     (r"llama-\d+(-\w+)*", "Meta"),
     (r"codellama-\w+(-\w+)*", "Meta"),
-
     # Microsoft Phi
     (r"phi-\d+(-\w+)*", "Microsoft"),
-
     # OpenAI latest
     (r"gpt-4\.5(-\w+)*", "OpenAI"),
     (r"o[13](-\w+)*", "OpenAI"),
-
     # Anthropic Claude 4.x
     (r"claude-4(-\w+)*", "Anthropic"),
     (r"claude-4\.5(-\w+)*", "Anthropic"),
     (r"claude-sonnet-4(-\w+)*", "Anthropic"),
     (r"claude-opus-4(-\w+)*", "Anthropic"),
     (r"claude-haiku-4(-\w+)*", "Anthropic"),
-
     # Google Gemini 2.x
     (r"gemini-2\.\d+(-\w+)*", "Google"),
-
     # Meta Llama 4
     (r"llama-4(-\w+)*", "Meta"),
-
     # DeepSeek
     (r"deepseek-\w+(-\w+)*", "DeepSeek"),
 ]
@@ -278,37 +225,26 @@ API_KEY_PATTERNS: List[Tuple[str, str]] = [
     # The sk-[a-zA-Z0-9]{20,} pattern below will match both OpenAI and DeepSeek keys
     # Additional context heuristics may be needed to distinguish between them
     (r"sk-[a-zA-Z0-9]{20,}", "OpenAI/DeepSeek"),
-
     # Anthropic
     (r"sk-ant-[a-zA-Z0-9-]{20,}", "Anthropic"),
-
     # HuggingFace
     (r"hf_[a-zA-Z0-9]{20,}", "HuggingFace"),
-
     # Cohere
     (r"key-[a-zA-Z0-9]{20,}", "Cohere"),
-
     # Groq
     (r"gsk_[a-zA-Z0-9]{20,}", "Groq"),
-
     # Replicate
     (r"r8_[a-zA-Z0-9]{20,}", "Replicate"),
-
     # xAI
     (r"xai-[a-zA-Z0-9]{20,}", "xAI"),
-
     # Google
     (r"AIza[a-zA-Z0-9_-]{20,}", "Google"),
-
     # Fireworks
     (r"fw_[a-zA-Z0-9]{20,}", "Fireworks"),
-
     # Perplexity
     (r"pplx-[a-zA-Z0-9]{20,}", "Perplexity"),
-
     # Together AI (64-char hex string)
     (r"[a-f0-9]{64}", "Together"),
-
     # Mistral (32-char alphanumeric)
     (r"[a-zA-Z0-9]{32}", "Mistral"),
 ]
@@ -339,7 +275,6 @@ AI_DOCKER_IMAGES: List[str] = [
 N8N_AI_NODE_TYPES: Set[str] = {
     # Agent nodes
     "@n8n/n8n-nodes-langchain.agent",
-
     # LLM Chat nodes
     "@n8n/n8n-nodes-langchain.lmChatOpenAi",
     "@n8n/n8n-nodes-langchain.lmChatAnthropic",
@@ -350,7 +285,6 @@ N8N_AI_NODE_TYPES: Set[str] = {
     "@n8n/n8n-nodes-langchain.lmChatGroq",
     "@n8n/n8n-nodes-langchain.lmChatCohere",
     "@n8n/n8n-nodes-langchain.lmChatHuggingFace",
-
     # Tool nodes
     "@n8n/n8n-nodes-langchain.mcpClientTool",
     "@n8n/n8n-nodes-langchain.toolHttpRequest",
@@ -358,7 +292,6 @@ N8N_AI_NODE_TYPES: Set[str] = {
     "@n8n/n8n-nodes-langchain.toolWorkflow",
     "@n8n/n8n-nodes-langchain.toolCalculator",
     "@n8n/n8n-nodes-langchain.toolWikipedia",
-
     # Embedding nodes
     "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
     "@n8n/n8n-nodes-langchain.embeddingsAzureOpenAi",
@@ -366,7 +299,6 @@ N8N_AI_NODE_TYPES: Set[str] = {
     "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
     "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
     "@n8n/n8n-nodes-langchain.embeddingsOllama",
-
     # Vector store nodes
     "@n8n/n8n-nodes-langchain.vectorStoreChroma",
     "@n8n/n8n-nodes-langchain.vectorStorePinecone",
@@ -374,28 +306,23 @@ N8N_AI_NODE_TYPES: Set[str] = {
     "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
     "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
     "@n8n/n8n-nodes-langchain.vectorStoreWeaviate",
-
     # Memory nodes
     "@n8n/n8n-nodes-langchain.memoryBufferWindow",
     "@n8n/n8n-nodes-langchain.memoryPostgresChat",
     "@n8n/n8n-nodes-langchain.memoryChatHistory",
     "@n8n/n8n-nodes-langchain.memoryRedisChat",
-
     # Output parser nodes
     "@n8n/n8n-nodes-langchain.outputParserStructured",
     "@n8n/n8n-nodes-langchain.outputParserAutofixing",
     "@n8n/n8n-nodes-langchain.outputParserJson",
-
     # Chain nodes
     "@n8n/n8n-nodes-langchain.chainLlm",
     "@n8n/n8n-nodes-langchain.chainSummarization",
     "@n8n/n8n-nodes-langchain.chainRetrievalQa",
-
     # Text splitter nodes
     "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
     "@n8n/n8n-nodes-langchain.textSplitterCharacterTextSplitter",
     "@n8n/n8n-nodes-langchain.textSplitterMarkdownTextSplitter",
-
     # Document loader nodes
     "@n8n/n8n-nodes-langchain.documentLoaderFile",
     "@n8n/n8n-nodes-langchain.documentLoaderJson",
@@ -407,27 +334,29 @@ N8N_AI_NODE_TYPES: Set[str] = {
 # =============================================================================
 # Directories to skip during scanning for performance and accuracy
 
-EXCLUDED_DIRS: FrozenSet[str] = frozenset({
-    "node_modules",
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    ".env",
-    "dist",
-    "build",
-    ".tox",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-    "egg-info",
-    ".eggs",
-    ".idea",
-    ".vscode",
-    "coverage",
-    ".coverage",
-    "htmlcov",
-})
+EXCLUDED_DIRS: FrozenSet[str] = frozenset(
+    {
+        "node_modules",
+        ".git",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".env",
+        "dist",
+        "build",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "egg-info",
+        ".eggs",
+        ".idea",
+        ".vscode",
+        "coverage",
+        ".coverage",
+        "htmlcov",
+    }
+)
 
 # =============================================================================
 # CREWAI FLOW PATTERNS
@@ -523,19 +452,16 @@ RISK_WEIGHTS: Dict[str, int] = {
     "code_http_tools": 30,  # Agent can execute arbitrary code or HTTP
     "shadow_ai": 25,  # Unauthorized AI usage
     "webhook_no_auth": 25,
-
     # High risks (15-20 points)
     "internet_facing": 20,
     "multi_agent_no_trust": 20,  # Multiple agents without trust boundaries
     "agent_chain_no_validation": 20,  # Agent chains without input validation
     "mcp_unknown_server": 20,  # MCP server from untrusted source
-
     # Medium risks (10-15 points)
     "no_auth": 15,
     "no_rate_limit": 10,
     "deprecated_model": 10,
     "no_error_handling": 10,
-
     # Low risks (5 points)
     "unpinned_model": 5,  # Model version not specified
 }
@@ -558,12 +484,10 @@ DEPRECATED_MODELS: Set[str] = {
     "text-babbage-001",
     "text-curie-001",
     "text-embedding-ada-002",  # Use text-embedding-3-small/large instead
-
     "gpt-4-0314",
     "gpt-4-0613",
     "gpt-4-32k-0314",
     "gpt-4-32k-0613",
-
     # Anthropic deprecated models
     "claude-instant-1",
     "claude-instant-1.2",

@@ -1,4 +1,5 @@
 """Tests for n8n scanner."""
+
 import pytest
 
 from ai_bom.scanners.n8n_scanner import N8nScanner

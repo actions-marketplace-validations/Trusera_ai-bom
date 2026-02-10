@@ -27,34 +27,38 @@ class CSVReporter(BaseReporter):
         writer = csv.writer(output)
 
         # Write header
-        writer.writerow([
-            "name",
-            "type",
-            "provider",
-            "model_name",
-            "version",
-            "risk_score",
-            "severity",
-            "file_path",
-            "line_number",
-            "flags",
-            "source",
-        ])
+        writer.writerow(
+            [
+                "name",
+                "type",
+                "provider",
+                "model_name",
+                "version",
+                "risk_score",
+                "severity",
+                "file_path",
+                "line_number",
+                "flags",
+                "source",
+            ]
+        )
 
         # Write component rows
         for component in result.components:
-            writer.writerow([
-                component.name,
-                component.type.value,
-                component.provider,
-                component.model_name,
-                component.version,
-                component.risk.score,
-                component.risk.severity.value,
-                component.location.file_path,
-                component.location.line_number if component.location.line_number else "",
-                ", ".join(component.flags) if component.flags else "",
-                component.source,
-            ])
+            writer.writerow(
+                [
+                    component.name,
+                    component.type.value,
+                    component.provider,
+                    component.model_name,
+                    component.version,
+                    component.risk.score,
+                    component.risk.severity.value,
+                    component.location.file_path,
+                    component.location.line_number if component.location.line_number else "",
+                    ", ".join(component.flags) if component.flags else "",
+                    component.source,
+                ]
+            )
 
         return output.getvalue()

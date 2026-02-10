@@ -1,7 +1,5 @@
 """Tests for expanded dependency parser support (Cargo.toml, go.mod, Gemfile, etc.)."""
 
-
-
 from ai_bom.scanners.code_scanner import CodeScanner
 
 

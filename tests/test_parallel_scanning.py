@@ -1,4 +1,5 @@
 """Tests for parallel scanner execution."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +11,7 @@ from ai_bom.scanners.base import BaseScanner
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_component(name: str = "test-comp") -> AIComponent:
     return AIComponent(
@@ -52,6 +54,7 @@ class _StubScanner(BaseScanner):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_run_scanners_parallel_returns_list(tmp_path: Path) -> None:
     """Parallel scanning should return a flat list of AIComponent."""

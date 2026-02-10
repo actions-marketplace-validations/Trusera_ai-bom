@@ -71,8 +71,4 @@ def score_component(component: AIComponent) -> RiskAssessment:
     else:
         severity = Severity.low
 
-    return RiskAssessment(
-        score=score,
-        severity=severity,
-        factors=factors
-    )
+    return RiskAssessment(score=score, severity=severity, factors=factors)

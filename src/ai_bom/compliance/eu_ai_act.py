@@ -82,8 +82,7 @@ def _check_high_risk_category(component: AIComponent) -> list[str]:
     """
     matched_categories = []
     component_text = (
-        f"{component.name} {component.metadata} "
-        f"{component.flags} {component.usage_type.value}"
+        f"{component.name} {component.metadata} {component.flags} {component.usage_type.value}"
     ).lower()
 
     for category, keywords in HIGH_RISK_CATEGORIES.items():
@@ -189,9 +188,7 @@ def check_eu_ai_act(components: list[AIComponent]) -> list[dict]:
             "social_scoring",
             "real_time_biometric",
         ]
-        component_text = (
-            f"{component.name} {component.metadata} {component.flags}"
-        ).lower()
+        component_text = (f"{component.name} {component.metadata} {component.flags}").lower()
 
         if any(indicator in component_text for indicator in prohibited_indicators):
             findings.append(

@@ -105,9 +105,7 @@ def _extract_license_from_metadata(component: AIComponent) -> str | None:
     metadata_str = str(component.metadata).lower()
 
     # Check for explicit license mentions
-    for license_id in list(RESTRICTIVE_LICENSES.keys()) + list(
-        PERMISSIVE_LICENSES.keys()
-    ):
+    for license_id in list(RESTRICTIVE_LICENSES.keys()) + list(PERMISSIVE_LICENSES.keys()):
         if license_id.lower() in metadata_str:
             return license_id
 

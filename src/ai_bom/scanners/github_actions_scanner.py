@@ -194,15 +194,11 @@ class GitHubActionsScanner(BaseScanner):
 
                 # Check for AI environment variables in job
                 components.extend(
-                    self._check_env_vars(
-                        job_config, file_path, workflow_name, job_name
-                    )
+                    self._check_env_vars(job_config, file_path, workflow_name, job_name)
                 )
 
             # Check for global environment variables
-            components.extend(
-                self._check_env_vars(data, file_path, workflow_name, "global")
-            )
+            components.extend(self._check_env_vars(data, file_path, workflow_name, "global"))
 
         except yaml.YAMLError:
             # YAML parse error, skip this file

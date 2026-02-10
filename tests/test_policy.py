@@ -72,9 +72,7 @@ class TestPolicyModel:
 class TestLoadPolicy:
     def test_load_valid_policy(self, tmp_path):
         policy_file = tmp_path / "policy.yml"
-        policy_file.write_text(
-            "max_critical: 0\nmax_high: 3\nblock_providers:\n  - Ollama\n"
-        )
+        policy_file.write_text("max_critical: 0\nmax_high: 3\nblock_providers:\n  - Ollama\n")
         policy = load_policy(policy_file)
         assert policy.max_critical == 0
         assert policy.max_high == 3
@@ -106,17 +104,21 @@ class TestEvaluatePolicy:
         assert violations == []
 
     def test_max_critical_pass(self):
-        result = _make_result([
-            _make_component(severity=Severity.high, score=60),
-        ])
+        result = _make_result(
+            [
+                _make_component(severity=Severity.high, score=60),
+            ]
+        )
         policy = Policy(max_critical=0)
         passed, violations = evaluate_policy(result, policy)
         assert passed
 
     def test_max_critical_fail(self):
-        result = _make_result([
-            _make_component(name="risky", severity=Severity.critical, score=80),
-        ])
+        result = _make_result(
+            [
+                _make_component(name="risky", severity=Severity.critical, score=80),
+            ]
+        )
         policy = Policy(max_critical=0)
         passed, violations = evaluate_policy(result, policy)
         assert not passed
@@ -124,85 +126,103 @@ class TestEvaluatePolicy:
         assert "critical" in violations[0].lower()
 
     def test_max_high_fail(self):
-        result = _make_result([
-            _make_component(name="h1", severity=Severity.high, score=60),
-            _make_component(name="h2", severity=Severity.high, score=55),
-            _make_component(name="h3", severity=Severity.high, score=65),
-        ])
+        result = _make_result(
+            [
+                _make_component(name="h1", severity=Severity.high, score=60),
+                _make_component(name="h2", severity=Severity.high, score=55),
+                _make_component(name="h3", severity=Severity.high, score=65),
+            ]
+        )
         policy = Policy(max_high=2)
         passed, violations = evaluate_policy(result, policy)
         assert not passed
         assert "3" in violations[0]
 
     def test_max_risk_score_fail(self):
-        result = _make_result([
-            _make_component(name="danger", score=90, severity=Severity.critical),
-        ])
+        result = _make_result(
+            [
+                _make_component(name="danger", score=90, severity=Severity.critical),
+            ]
+        )
         policy = Policy(max_risk_score=75)
         passed, violations = evaluate_policy(result, policy)
         assert not passed
         assert "90" in violations[0]
 
     def test_max_risk_score_pass(self):
-        result = _make_result([
-            _make_component(score=50, severity=Severity.medium),
-        ])
+        result = _make_result(
+            [
+                _make_component(score=50, severity=Severity.medium),
+            ]
+        )
         policy = Policy(max_risk_score=75)
         passed, violations = evaluate_policy(result, policy)
         assert passed
 
     def test_block_providers_fail(self):
-        result = _make_result([
-            _make_component(provider="Ollama"),
-        ])
+        result = _make_result(
+            [
+                _make_component(provider="Ollama"),
+            ]
+        )
         policy = Policy(block_providers=["Ollama"])
         passed, violations = evaluate_policy(result, policy)
         assert not passed
         assert "Ollama" in violations[0]
 
     def test_block_providers_case_insensitive(self):
-        result = _make_result([
-            _make_component(provider="OLLAMA"),
-        ])
+        result = _make_result(
+            [
+                _make_component(provider="OLLAMA"),
+            ]
+        )
         policy = Policy(block_providers=["ollama"])
         passed, violations = evaluate_policy(result, policy)
         assert not passed
 
     def test_block_providers_pass(self):
-        result = _make_result([
-            _make_component(provider="OpenAI"),
-        ])
+        result = _make_result(
+            [
+                _make_component(provider="OpenAI"),
+            ]
+        )
         policy = Policy(block_providers=["Ollama"])
         passed, violations = evaluate_policy(result, policy)
         assert passed
 
     def test_block_flags_fail(self):
-        result = _make_result([
-            _make_component(name="leaked", flags=["hardcoded_api_key"]),
-        ])
+        result = _make_result(
+            [
+                _make_component(name="leaked", flags=["hardcoded_api_key"]),
+            ]
+        )
         policy = Policy(block_flags=["hardcoded_api_key"])
         passed, violations = evaluate_policy(result, policy)
         assert not passed
         assert "hardcoded_api_key" in violations[0]
 
     def test_block_flags_pass(self):
-        result = _make_result([
-            _make_component(flags=["unpinned_model"]),
-        ])
+        result = _make_result(
+            [
+                _make_component(flags=["unpinned_model"]),
+            ]
+        )
         policy = Policy(block_flags=["hardcoded_api_key"])
         passed, violations = evaluate_policy(result, policy)
         assert passed
 
     def test_multiple_violations(self):
-        result = _make_result([
-            _make_component(
-                name="bad",
-                provider="Ollama",
-                severity=Severity.critical,
-                score=90,
-                flags=["hardcoded_api_key"],
-            ),
-        ])
+        result = _make_result(
+            [
+                _make_component(
+                    name="bad",
+                    provider="Ollama",
+                    severity=Severity.critical,
+                    score=90,
+                    flags=["hardcoded_api_key"],
+                ),
+            ]
+        )
         policy = Policy(
             max_critical=0,
             max_risk_score=50,
@@ -214,13 +234,15 @@ class TestEvaluatePolicy:
         assert len(violations) >= 3  # critical count, risk score, provider, flag
 
     def test_default_policy_always_passes(self):
-        result = _make_result([
-            _make_component(
-                severity=Severity.critical,
-                score=100,
-                flags=["hardcoded_api_key"],
-            ),
-        ])
+        result = _make_result(
+            [
+                _make_component(
+                    severity=Severity.critical,
+                    score=100,
+                    flags=["hardcoded_api_key"],
+                ),
+            ]
+        )
         policy = Policy()
         passed, violations = evaluate_policy(result, policy)
         assert passed

@@ -1,4 +1,5 @@
 """CLI integration tests for ai-bom."""
+
 from __future__ import annotations
 
 import json
@@ -58,7 +59,8 @@ def test_scan_cyclonedx_format(tmp_path):
     demo_path = Path(__file__).parent.parent / "examples" / "demo-project"
     out_file = tmp_path / "out.cdx.json"
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--format", "cyclonedx", "-o", str(out_file)],
+        app,
+        ["scan", str(demo_path), "--format", "cyclonedx", "-o", str(out_file)],
     )
     assert result.exit_code == 0
     assert out_file.exists()
@@ -118,7 +120,8 @@ def test_scan_html_format(tmp_path):
 def test_scan_spdx3_format(tmp_path):
     out_file = tmp_path / "out.spdx.json"
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--format", "spdx3", "-o", str(out_file)],
+        app,
+        ["scan", str(demo_path), "--format", "spdx3", "-o", str(out_file)],
     )
     assert result.exit_code == 0
     assert out_file.exists()
@@ -132,7 +135,8 @@ def test_scan_deep_mode(tmp_path):
     py_file.write_text("import openai\nclient = openai.OpenAI()\n")
     out_file = tmp_path / "out.cdx.json"
     result = runner.invoke(
-        app, ["scan", str(tmp_path), "--deep", "--format", "cyclonedx", "-o", str(out_file)],
+        app,
+        ["scan", str(tmp_path), "--deep", "--format", "cyclonedx", "-o", str(out_file)],
     )
     assert result.exit_code == 0
     data = json.loads(out_file.read_text())
@@ -143,7 +147,8 @@ def test_scan_deep_mode(tmp_path):
 
 def test_scan_fail_on_exits_1():
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--fail-on", "low", "--quiet"],
+        app,
+        ["scan", str(demo_path), "--fail-on", "low", "--quiet"],
     )
     # demo-project has low+ severity components
     assert result.exit_code == 1
@@ -151,7 +156,8 @@ def test_scan_fail_on_exits_1():
 
 def test_scan_fail_on_invalid_severity():
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--fail-on", "bogus", "--quiet"],
+        app,
+        ["scan", str(demo_path), "--fail-on", "bogus", "--quiet"],
     )
     # invalid severity is a no-op warning, should still exit 0
     assert result.exit_code == 0
@@ -161,14 +167,16 @@ def test_scan_policy_fail(tmp_path):
     policy_file = tmp_path / "policy.yml"
     policy_file.write_text("max_critical: 0\nmax_high: 0\nmax_risk_score: 1\n")
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--policy", str(policy_file)],
+        app,
+        ["scan", str(demo_path), "--policy", str(policy_file)],
     )
     assert result.exit_code == 1
 
 
 def test_scan_policy_missing_file():
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--policy", "/nonexistent-policy.yml"],
+        app,
+        ["scan", str(demo_path), "--policy", "/nonexistent-policy.yml"],
     )
     assert result.exit_code == 1
 
@@ -177,7 +185,8 @@ def test_scan_save_dashboard(tmp_path, monkeypatch):
     # Monkeypatch DB_PATH to a temp location
     monkeypatch.setattr("ai_bom.dashboard.db.DB_PATH", tmp_path / "test.db")
     result = runner.invoke(
-        app, ["scan", str(demo_path), "--save-dashboard"],
+        app,
+        ["scan", str(demo_path), "--save-dashboard"],
     )
     assert result.exit_code == 0
     assert "Scan saved to dashboard" in result.output

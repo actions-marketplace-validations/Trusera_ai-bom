@@ -293,7 +293,8 @@ class BaseScanner(ABC):
                     if not str(current_real).startswith(str(root_real)):
                         logger.warning(
                             "Skipping symlink outside root: %s -> %s",
-                            dirpath, current_real,
+                            dirpath,
+                            current_real,
                         )
                         dirnames[:] = []
                         continue
@@ -305,11 +306,7 @@ class BaseScanner(ABC):
                     continue
 
                 # Prune excluded directories in-place (modifies dirnames)
-                dirnames[:] = [
-                    d
-                    for d in dirnames
-                    if d not in EXCLUDED_DIRS and d not in test_dirs
-                ]
+                dirnames[:] = [d for d in dirnames if d not in EXCLUDED_DIRS and d not in test_dirs]
 
                 # Check each file in current directory
                 for filename in filenames_list:
@@ -326,8 +323,9 @@ class BaseScanner(ABC):
                         # Skip if symlink points outside root
                         if not str(file_real).startswith(str(root_real)):
                             logger.warning(
-                                "Skipping symlink outside root:"
-                                " %s -> %s", file_path, file_real,
+                                "Skipping symlink outside root: %s -> %s",
+                                file_path,
+                                file_real,
                             )
                             continue
                     except (OSError, ValueError) as e:
@@ -339,9 +337,9 @@ class BaseScanner(ABC):
                         file_size = os.path.getsize(file_path)
                         if file_size > 10_485_760:  # 10MB in bytes
                             logger.warning(
-                                "Skipping large file (>10MB):"
-                                " %s (%d bytes)",
-                                file_path, file_size,
+                                "Skipping large file (>10MB): %s (%d bytes)",
+                                file_path,
+                                file_size,
                             )
                             continue
                     except PermissionError:

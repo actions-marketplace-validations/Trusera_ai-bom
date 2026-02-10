@@ -1,6 +1,5 @@
 """Tests for GitHub Actions scanner."""
 
-
 import pytest
 
 from ai_bom.models import ComponentType

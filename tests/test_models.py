@@ -1,4 +1,5 @@
 """Tests for Pydantic data models."""
+
 from ai_bom.models import (
     AIComponent,
     ComponentType,

@@ -1,4 +1,5 @@
 """SARIF 2.1.0 reporter for GitHub Code Scanning integration."""
+
 from __future__ import annotations
 
 import json
@@ -45,9 +46,7 @@ def _build_rules(components: list[AIComponent]) -> list[dict]:
     return list(seen.values())
 
 
-def _build_result(
-    component: AIComponent, target_path: str, rule_index_map: dict[str, int]
-) -> dict:
+def _build_result(component: AIComponent, target_path: str, rule_index_map: dict[str, int]) -> dict:
     """Convert a single AIComponent to a SARIF result object."""
     rule_id = _make_rule_id(component)
 
@@ -121,8 +120,7 @@ class SARIFReporter(BaseReporter):
         rules = _build_rules(result.components)
         rule_index_map = {rule["id"]: idx for idx, rule in enumerate(rules)}
         results = [
-            _build_result(comp, result.target_path, rule_index_map)
-            for comp in result.components
+            _build_result(comp, result.target_path, rule_index_map) for comp in result.components
         ]
 
         sarif = {

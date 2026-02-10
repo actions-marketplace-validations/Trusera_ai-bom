@@ -1,4 +1,5 @@
 """Shared test fixtures for AI-BOM test suite."""
+
 from pathlib import Path
 
 import pytest
@@ -98,7 +99,7 @@ def tmp_project(tmp_path):
     # Python file with OpenAI usage
     app_py = tmp_path / "app.py"
     app_py.write_text(
-        'from openai import OpenAI\n'
+        "from openai import OpenAI\n"
         'client = OpenAI(api_key="sk-demo1234567890abcdefghijklmnopqrstuvwxyz1234")\n'
         'response = client.chat.completions.create(model="gpt-3.5-turbo", messages=[])\n'
     )
@@ -110,8 +111,8 @@ def tmp_project(tmp_path):
     # .env file
     env = tmp_path / ".env.example"
     env.write_text(
-        'OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n'
-        'ANTHROPIC_API_KEY=sk-ant-demo1234567890abcdefghij\n'
+        "OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n"
+        "ANTHROPIC_API_KEY=sk-ant-demo1234567890abcdefghij\n"
     )
 
     return tmp_path

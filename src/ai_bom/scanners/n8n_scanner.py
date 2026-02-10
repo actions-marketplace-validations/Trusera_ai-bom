@@ -211,9 +211,7 @@ class N8nScanner(BaseScanner):
             agent_chains=agent_chains,
         )
 
-    def _parse_connections(
-        self, connections: dict[str, Any]
-    ) -> dict[str, list[str]]:
+    def _parse_connections(self, connections: dict[str, Any]) -> dict[str, list[str]]:
         """Parse n8n connections object into simple node->nodes mapping.
 
         Args:
@@ -275,9 +273,7 @@ class N8nScanner(BaseScanner):
             List of agent node name chains
         """
         agent_nodes = {
-            node.get("name", "")
-            for node in nodes
-            if self._is_agent_node(node.get("type", ""))
+            node.get("name", "") for node in nodes if self._is_agent_node(node.get("type", ""))
         }
 
         chains: list[list[str]] = []
@@ -401,9 +397,8 @@ class N8nScanner(BaseScanner):
                         location = SourceLocation(
                             file_path=str(file_path.resolve()),
                             context_snippet=(
-                            f"Workflow: {workflow_info.workflow_name},"
-                            f" Node: {node_name}"
-                        ),
+                                f"Workflow: {workflow_info.workflow_name}, Node: {node_name}"
+                            ),
                         )
                         component = AIComponent(
                             name=f"{provider} API Key in HTTP Request",
@@ -426,18 +421,14 @@ class N8nScanner(BaseScanner):
 
             # Check code nodes for dangerous patterns
             if node_type == "n8n-nodes-base.code":
-                code_content = (
-                    parameters.get("jsCode", "")
-                    or parameters.get("code", "")
-                )
+                code_content = parameters.get("jsCode", "") or parameters.get("code", "")
                 if code_content:
                     for danger_pattern in dangerous_code_patterns:
                         if re.search(danger_pattern, code_content):
                             location = SourceLocation(
                                 file_path=str(file_path.resolve()),
                                 context_snippet=(
-                                    f"Workflow: {workflow_info.workflow_name},"
-                                    f" Node: {node_name}"
+                                    f"Workflow: {workflow_info.workflow_name}, Node: {node_name}"
                                 ),
                             )
                             component = AIComponent(
@@ -492,10 +483,7 @@ class N8nScanner(BaseScanner):
         # Create location
         location = SourceLocation(
             file_path=str(file_path.resolve()),
-            context_snippet=(
-                f"Workflow: {workflow_info.workflow_name},"
-                f" Node: {node_name}"
-            ),
+            context_snippet=(f"Workflow: {workflow_info.workflow_name}, Node: {node_name}"),
         )
 
         # Create component
@@ -525,9 +513,7 @@ class N8nScanner(BaseScanner):
 
         return component
 
-    def _map_node_type(
-        self, node_type: str
-    ) -> tuple[ComponentType, UsageType, str] | None:
+    def _map_node_type(self, node_type: str) -> tuple[ComponentType, UsageType, str] | None:
         """Map n8n node type to component attributes.
 
         Args:
@@ -620,9 +606,7 @@ class N8nScanner(BaseScanner):
 
         return None
 
-    def _extract_model_name(
-        self, parameters: dict[str, Any], node_type: str
-    ) -> str:
+    def _extract_model_name(self, parameters: dict[str, Any], node_type: str) -> str:
         """Extract model name from node parameters.
 
         Args:
@@ -706,9 +690,7 @@ class N8nScanner(BaseScanner):
 
         return False
 
-    def _check_mcp_risks(
-        self, parameters: dict[str, Any], component: AIComponent
-    ) -> None:
+    def _check_mcp_risks(self, parameters: dict[str, Any], component: AIComponent) -> None:
         """Check for MCP-specific security risks.
 
         Args:
@@ -818,10 +800,7 @@ class N8nScanner(BaseScanner):
                 conn_type = connected_node.get("type", "")
                 if ".toolCode" in conn_type or conn_type == "n8n-nodes-base.code":
                     has_code_tool = True
-                if (
-                    ".toolHttpRequest" in conn_type
-                    or conn_type == "n8n-nodes-base.httpRequest"
-                ):
+                if ".toolHttpRequest" in conn_type or conn_type == "n8n-nodes-base.httpRequest":
                     has_http_tool = True
 
             # Flag agent if it has both code and HTTP tools
@@ -881,9 +860,7 @@ class N8nScanner(BaseScanner):
             connected_names = self._get_all_connected_nodes(node_name, connections)
             for connected_name in connected_names:
                 connected_node = node_map.get(connected_name)
-                if connected_node and self._is_agent_node(
-                    connected_node.get("type", "")
-                ):
+                if connected_node and self._is_agent_node(connected_node.get("type", "")):
                     has_agent_output = True
 
             # Flag if workflow execution chains agents
@@ -893,9 +870,7 @@ class N8nScanner(BaseScanner):
                     if component.type == ComponentType.agent_framework:
                         component.flags.append("agent_chain_no_validation")
 
-    def _get_all_connected_nodes(
-        self, node_name: str, connections: dict[str, Any]
-    ) -> list[str]:
+    def _get_all_connected_nodes(self, node_name: str, connections: dict[str, Any]) -> list[str]:
         """Get all nodes connected to the given node.
 
         Args:
@@ -951,7 +926,8 @@ class N8nScanner(BaseScanner):
         # Check each workflow for executeWorkflow nodes pointing to AI workflows
         for workflow_info in workflows.values():
             agent_count = sum(
-                1 for comp in workflow_components.get(workflow_info.workflow_name, [])
+                1
+                for comp in workflow_components.get(workflow_info.workflow_name, [])
                 if comp.type == ComponentType.agent_framework
             )
 

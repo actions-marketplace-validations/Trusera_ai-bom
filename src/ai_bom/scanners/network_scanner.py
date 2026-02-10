@@ -159,9 +159,7 @@ class NetworkScanner(BaseScanner):
         # Scan each file
         for file_path in files_to_scan:
             try:
-                components.extend(
-                    self._scan_file(file_path, seen_endpoints)
-                )
+                components.extend(self._scan_file(file_path, seen_endpoints))
             except Exception:
                 # Skip files that can't be read or parsed
                 continue
@@ -217,9 +215,7 @@ class NetworkScanner(BaseScanner):
         return file_path.suffix.lower() in {".yaml", ".yml", ".json", ".toml", ".ini", ".cfg"}
 
     def _scan_file(
-        self,
-        file_path: Path,
-        seen_endpoints: Set[Tuple[str, str]]
+        self, file_path: Path, seen_endpoints: Set[Tuple[str, str]]
     ) -> list[AIComponent]:
         """Scan a single file for AI endpoints and API keys.
 
@@ -248,9 +244,7 @@ class NetworkScanner(BaseScanner):
 
             # For .env files, parse KEY=VALUE
             if is_env_file:
-                components.extend(
-                    self._scan_env_line(file_path, line_num, line, seen_endpoints)
-                )
+                components.extend(self._scan_env_line(file_path, line_num, line, seen_endpoints))
 
             # For all files, check for endpoints
             components.extend(
@@ -258,18 +252,12 @@ class NetworkScanner(BaseScanner):
             )
 
             # For all files, check for hardcoded API keys
-            components.extend(
-                self._scan_line_for_api_keys(file_path, line_num, line)
-            )
+            components.extend(self._scan_line_for_api_keys(file_path, line_num, line))
 
         return components
 
     def _scan_env_line(
-        self,
-        file_path: Path,
-        line_num: int,
-        line: str,
-        seen_endpoints: Set[Tuple[str, str]]
+        self, file_path: Path, line_num: int, line: str, seen_endpoints: Set[Tuple[str, str]]
     ) -> list[AIComponent]:
         """Scan an .env file line for AI environment variables.
 
@@ -285,7 +273,7 @@ class NetworkScanner(BaseScanner):
         components: list[AIComponent] = []
 
         # Parse KEY=VALUE (handle quotes and spaces)
-        match = re.match(r'^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$', line)
+        match = re.match(r"^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$", line)
         if not match:
             return components
 
@@ -331,11 +319,7 @@ class NetworkScanner(BaseScanner):
         return components
 
     def _scan_line_for_endpoints(
-        self,
-        file_path: Path,
-        line_num: int,
-        line: str,
-        seen_endpoints: Set[Tuple[str, str]]
+        self, file_path: Path, line_num: int, line: str, seen_endpoints: Set[Tuple[str, str]]
     ) -> list[AIComponent]:
         """Scan a line for AI endpoint URLs.
 
@@ -384,10 +368,7 @@ class NetworkScanner(BaseScanner):
         return components
 
     def _scan_line_for_api_keys(
-        self,
-        file_path: Path,
-        line_num: int,
-        line: str
+        self, file_path: Path, line_num: int, line: str
     ) -> list[AIComponent]:
         """Scan a line for hardcoded API keys.
 
@@ -474,7 +455,7 @@ class NetworkScanner(BaseScanner):
             return False
 
         # Skip references like ${VAR_NAME}
-        if re.match(r'^\$\{[A-Z_][A-Z0-9_]*\}$', value):
+        if re.match(r"^\$\{[A-Z_][A-Z0-9_]*\}$", value):
             return False
 
         # Skip placeholder values
@@ -592,4 +573,3 @@ class NetworkScanner(BaseScanner):
             "orchestration": UsageType.orchestration,
         }
         return mapping.get(usage_type, UsageType.unknown)
-

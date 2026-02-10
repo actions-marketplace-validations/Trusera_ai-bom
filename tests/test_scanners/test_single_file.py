@@ -1,4 +1,5 @@
 """Tests for single-file scanning via iter_files()."""
+
 import os
 
 import pytest
@@ -49,7 +50,7 @@ class TestSingleFileScanning:
 
     def test_scan_single_python_file(self, scanner, tmp_path):
         f = tmp_path / "app.py"
-        f.write_text('from openai import OpenAI\nclient = OpenAI()\n')
+        f.write_text("from openai import OpenAI\nclient = OpenAI()\n")
         components = scanner.scan(f)
         names = [c.name.lower() for c in components]
         assert "openai" in names

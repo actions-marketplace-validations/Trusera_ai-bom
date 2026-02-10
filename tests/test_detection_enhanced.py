@@ -96,10 +96,7 @@ class TestCrewAIFlowDetection:
         crewai_patterns = [p for p in LLM_PATTERNS if p.sdk_name == "CrewAI"]
         crewai = crewai_patterns[0]
         # Should detect 'from crewai.flow' import
-        assert any(
-            re.search(p, "from crewai.flow import Flow")
-            for p in crewai.import_patterns
-        )
+        assert any(re.search(p, "from crewai.flow import Flow") for p in crewai.import_patterns)
 
 
 # ── 5c: MCP Config File Detection ──────────────────────────────────────────
@@ -352,8 +349,8 @@ class TestASTScanner:
         assert isinstance(components, list)
 
     def test_scan_directory(self, tmp_path: Path):
-        code1 = 'import openai\n'
-        code2 = 'import anthropic\n'
+        code1 = "import openai\n"
+        code2 = "import anthropic\n"
         (tmp_path / "a.py").write_text(code1)
         (tmp_path / "b.py").write_text(code2)
 

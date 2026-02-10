@@ -1,4 +1,5 @@
 """Tests for LLM pattern detection."""
+
 import re
 
 import pytest
@@ -16,8 +17,7 @@ class TestLLMPatterns:
     def test_openai_import_patterns(self):
         openai_pattern = next(p for p in LLM_PATTERNS if p.sdk_name == "OpenAI")
         assert any(
-            re.search(pat, "from openai import OpenAI")
-            for pat in openai_pattern.import_patterns
+            re.search(pat, "from openai import OpenAI") for pat in openai_pattern.import_patterns
         )
 
     def test_anthropic_import_patterns(self):
@@ -27,8 +27,7 @@ class TestLLMPatterns:
     def test_crewai_usage_patterns(self):
         pattern = next(p for p in LLM_PATTERNS if p.sdk_name == "CrewAI")
         assert any(
-            re.search(pat, 'crew = Crew(agents=[a], tasks=[t])')
-            for pat in pattern.usage_patterns
+            re.search(pat, "crew = Crew(agents=[a], tasks=[t])") for pat in pattern.usage_patterns
         )
 
     def test_get_all_dep_names(self):
@@ -88,11 +87,14 @@ class TestModelRegistry:
 
 
 class TestAPIKeyPatterns:
-    @pytest.mark.parametrize("key,provider", [
-        ("sk-abcdefghijklmnopqrstuvwxyz1234", "OpenAI/DeepSeek"),  # Updated to match config
-        ("sk-ant-abcdefghijklmnopqrstuvwxyz", "Anthropic"),
-        ("hf_abcdefghijklmnopqrstuvwxyz", "HuggingFace"),
-    ])
+    @pytest.mark.parametrize(
+        "key,provider",
+        [
+            ("sk-abcdefghijklmnopqrstuvwxyz1234", "OpenAI/DeepSeek"),  # Updated to match config
+            ("sk-ant-abcdefghijklmnopqrstuvwxyz", "Anthropic"),
+            ("hf_abcdefghijklmnopqrstuvwxyz", "HuggingFace"),
+        ],
+    )
     def test_key_patterns(self, key, provider):
         for pattern, pat_provider in API_KEY_PATTERNS:
             if re.match(pattern, key) and pat_provider == provider:
@@ -101,12 +103,15 @@ class TestAPIKeyPatterns:
 
 
 class TestModelPatterns:
-    @pytest.mark.parametrize("model,expected_provider", [
-        ("gpt-4o-mini", "OpenAI"),
-        ("claude-3-opus", "Anthropic"),
-        ("gemini-1.5-pro", "Google"),
-        ("mistral-large", "Mistral"),
-    ])
+    @pytest.mark.parametrize(
+        "model,expected_provider",
+        [
+            ("gpt-4o-mini", "OpenAI"),
+            ("claude-3-opus", "Anthropic"),
+            ("gemini-1.5-pro", "Google"),
+            ("mistral-large", "Mistral"),
+        ],
+    )
     def test_model_patterns(self, model, expected_provider):
         for pattern, provider in KNOWN_MODEL_PATTERNS:
             if re.match(pattern, model) and provider == expected_provider:

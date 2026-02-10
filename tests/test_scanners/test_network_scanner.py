@@ -1,4 +1,5 @@
 """Tests for network scanner."""
+
 from pathlib import Path
 
 import pytest
@@ -25,7 +26,7 @@ class TestNetworkScanner:
 
     def test_detects_openai_key(self, scanner, tmp_path):
         f = tmp_path / ".env"
-        f.write_text('OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n')
+        f.write_text("OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n")
         components = scanner.scan(tmp_path)
         assert len(components) > 0
         providers = [c.provider for c in components]
@@ -33,7 +34,7 @@ class TestNetworkScanner:
 
     def test_source_is_network(self, scanner, tmp_path):
         env_file = tmp_path / ".env"
-        env_file.write_text('OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n')
+        env_file.write_text("OPENAI_API_KEY=sk-demo1234567890abcdefghijklmnopqrstuvwxyz0000\n")
         components = scanner.scan(tmp_path)
         for c in components:
             assert c.source == "network"

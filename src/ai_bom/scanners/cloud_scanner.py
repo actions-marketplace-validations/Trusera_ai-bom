@@ -133,9 +133,7 @@ class CloudScanner(BaseScanner):
     }
 
     # Patterns for GPU instance types
-    GPU_INSTANCE_PATTERN = re.compile(
-        r"ml\.(g\d+|p\d+|inf\d+|trn\d+)\.\w+", re.IGNORECASE
-    )
+    GPU_INSTANCE_PATTERN = re.compile(r"ml\.(g\d+|p\d+|inf\d+|trn\d+)\.\w+", re.IGNORECASE)
 
     def supports(self, path: Path) -> bool:
         """Check if path contains Terraform or CloudFormation files.
@@ -262,13 +260,12 @@ class CloudScanner(BaseScanner):
                     context = "\n".join(context_lines).strip()
 
                     # Extract additional metadata from the resource block
-                    metadata = self._extract_terraform_metadata(
-                        content, line_num - 1, lines
-                    )
+                    metadata = self._extract_terraform_metadata(content, line_num - 1, lines)
 
                     # Determine model name from metadata
                     model_name = metadata.get(
-                        "model_id", metadata.get("foundation_model", ""),
+                        "model_id",
+                        metadata.get("foundation_model", ""),
                     )
 
                     # Create component
@@ -336,9 +333,7 @@ class CloudScanner(BaseScanner):
 
         # Extract common AI-related properties
         # foundation_model = "..."
-        foundation_model_match = re.search(
-            r'foundation_model\s*=\s*"([^"]+)"', block_text
-        )
+        foundation_model_match = re.search(r'foundation_model\s*=\s*"([^"]+)"', block_text)
         if foundation_model_match:
             metadata["foundation_model"] = foundation_model_match.group(1)
 
@@ -416,9 +411,7 @@ class CloudScanner(BaseScanner):
 
                 resource_type = resource_def.get("Type", "")
                 if resource_type in self.CLOUDFORMATION_AI_RESOURCES:
-                    provider, comp_type = self.CLOUDFORMATION_AI_RESOURCES[
-                        resource_type
-                    ]
+                    provider, comp_type = self.CLOUDFORMATION_AI_RESOURCES[resource_type]
 
                     # Extract properties
                     properties = resource_def.get("Properties", {})
@@ -533,9 +526,7 @@ class CloudScanner(BaseScanner):
             if "AWSTemplateFormatVersion" in content:
                 return True
 
-            if "AWS::" in content and (
-                "Resources:" in content or '"Resources"' in content
-            ):
+            if "AWS::" in content and ("Resources:" in content or '"Resources"' in content):
                 return True
 
             # Try parsing and checking structure
@@ -576,7 +567,8 @@ class CloudScanner(BaseScanner):
         if component_type in {ComponentType.model, ComponentType.endpoint}:
             # Check if model name suggests embedding
             model_name = metadata.get(
-                "model_id", metadata.get("foundation_model", ""),
+                "model_id",
+                metadata.get("foundation_model", ""),
             )
             if "embed" in model_name.lower():
                 return UsageType.embedding

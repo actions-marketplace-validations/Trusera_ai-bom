@@ -6,6 +6,7 @@ These extensions are NOT part of the official SPDX 3.0 specification and will
 not pass an SPDX validator.  They provide AI-specific metadata that goes beyond
 what standard SPDX currently supports.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,9 +48,7 @@ def _build_ai_package(component: AIComponent, doc_namespace: str) -> dict:
         "name": component.name,
         "ai-bom:safetyRiskAssessment": {
             "score": component.risk.score,
-            "severity": _SAFETY_RISK_MAP.get(
-                component.risk.severity.value, "low"
-            ),
+            "severity": _SAFETY_RISK_MAP.get(component.risk.severity.value, "low"),
         },
     }
 
@@ -90,9 +89,7 @@ class SPDX3Reporter(BaseReporter):
     def render(self, result: ScanResult) -> str:
         doc_namespace = f"https://spdx.org/spdxdocs/ai-bom-{uuid4()}"
 
-        elements = [
-            _build_ai_package(comp, doc_namespace) for comp in result.components
-        ]
+        elements = [_build_ai_package(comp, doc_namespace) for comp in result.components]
 
         doc: dict = {
             "@context": [

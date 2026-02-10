@@ -84,8 +84,13 @@ def save_scan(
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                scan_id, timestamp, target_path, summary_json,
-                components_json, scan_duration, ai_bom_version,
+                scan_id,
+                timestamp,
+                target_path,
+                summary_json,
+                components_json,
+                scan_duration,
+                ai_bom_version,
             ),
         )
         conn.commit()

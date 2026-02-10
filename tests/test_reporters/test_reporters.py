@@ -1,4 +1,5 @@
 """Tests for report output formats."""
+
 import json
 
 from ai_bom.reporters import get_reporter
@@ -23,6 +24,7 @@ class TestCLIReporter:
 
     def test_empty_result(self):
         from ai_bom.models import ScanResult
+
         result = ScanResult(target_path="/empty")
         result.build_summary()
         reporter = CLIReporter()
@@ -165,6 +167,7 @@ class TestSARIFReporter:
 
     def test_empty_components(self):
         from ai_bom.models import ScanResult
+
         result = ScanResult(target_path="/empty")
         result.build_summary()
         reporter = SARIFReporter()
@@ -181,6 +184,7 @@ class TestSARIFReporter:
             SourceLocation,
             UsageType,
         )
+
         comp = AIComponent(
             name="openai",
             type=ComponentType.llm_provider,
@@ -210,6 +214,7 @@ class TestSARIFReporter:
             SourceLocation,
             UsageType,
         )
+
         comp = AIComponent(
             name="openai",
             type=ComponentType.llm_provider,

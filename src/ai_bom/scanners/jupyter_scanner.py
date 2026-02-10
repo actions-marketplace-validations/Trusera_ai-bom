@@ -169,9 +169,7 @@ class JupyterScanner(BaseScanner):
                         # Check if it's a known AI package
                         if base_module in KNOWN_AI_PACKAGES or module_name in KNOWN_AI_PACKAGES:
                             package_key = (
-                                module_name
-                                if module_name in KNOWN_AI_PACKAGES
-                                else base_module
+                                module_name if module_name in KNOWN_AI_PACKAGES else base_module
                             )
 
                             # Avoid duplicates
@@ -196,9 +194,7 @@ class JupyterScanner(BaseScanner):
                                     file_path=str(file_path.resolve()),
                                     line_number=None,
                                     context_snippet=(
-                                        f"Cell {cell_idx},"
-                                        f" Line {line_num}:"
-                                        f" {line[:80]}"
+                                        f"Cell {cell_idx}, Line {line_num}: {line[:80]}"
                                     ),
                                 ),
                                 usage_type=usage_enum,
@@ -212,9 +208,7 @@ class JupyterScanner(BaseScanner):
                             components.append(component)
 
                 # Check for model loading patterns
-                components.extend(
-                    self._check_model_loading(source_code, file_path, cell_idx)
-                )
+                components.extend(self._check_model_loading(source_code, file_path, cell_idx))
 
         except json.JSONDecodeError:
             # Invalid JSON, skip this file

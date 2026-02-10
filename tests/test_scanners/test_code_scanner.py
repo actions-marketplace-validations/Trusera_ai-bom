@@ -24,7 +24,7 @@ class TestCodeScanner:
 
     def test_detects_openai_import(self, scanner, tmp_path):
         f = tmp_path / "app.py"
-        f.write_text('from openai import OpenAI\nclient = OpenAI()\n')
+        f.write_text("from openai import OpenAI\nclient = OpenAI()\n")
         req = tmp_path / "requirements.txt"
         req.write_text("openai>=1.0.0\n")
         components = scanner.scan(tmp_path)
@@ -34,8 +34,8 @@ class TestCodeScanner:
     def test_detects_hardcoded_api_key(self, scanner, tmp_path):
         f = tmp_path / "app.py"
         f.write_text(
-            'from openai import OpenAI\n'
-            'client = OpenAI(api_key='
+            "from openai import OpenAI\n"
+            "client = OpenAI(api_key="
             '"sk-demo1234567890abcdefghijklmnopqrstuvwxyz1234")\n'
         )
         components = scanner.scan(tmp_path)
@@ -64,7 +64,7 @@ class TestCodeScanner:
 
     def test_source_is_code(self, scanner, tmp_path):
         f = tmp_path / "app.py"
-        f.write_text('import openai\n')
+        f.write_text("import openai\n")
         components = scanner.scan(tmp_path)
         for c in components:
             assert c.source == "code"

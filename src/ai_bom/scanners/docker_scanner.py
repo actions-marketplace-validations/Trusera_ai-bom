@@ -70,9 +70,7 @@ class DockerScanner(BaseScanner):
             # Match Dockerfile* or *compose*.yml/yaml
             if filename.startswith("dockerfile") or filename.endswith(".dockerfile"):
                 return True
-            if "compose" in filename and (
-                filename.endswith(".yml") or filename.endswith(".yaml")
-            ):
+            if "compose" in filename and (filename.endswith(".yml") or filename.endswith(".yaml")):
                 return True
             return False
 
@@ -132,10 +130,7 @@ class DockerScanner(BaseScanner):
                 if not dockerfile.is_file():
                     continue
                 filename = dockerfile.name.lower()
-                if (
-                    "dockerfile" in filename
-                    and filename != "dockerfile"
-                ):
+                if "dockerfile" in filename and filename != "dockerfile":
                     components.extend(self._scan_dockerfile(dockerfile))
 
             # Find all compose files

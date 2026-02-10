@@ -58,9 +58,7 @@ class N8nAPIClient:
         try:
             resp = self.session.request(method, url, timeout=self.timeout)
         except requests.ConnectionError as exc:
-            raise N8nConnectionError(
-                f"Could not connect to n8n at {self.base_url}: {exc}"
-            ) from exc
+            raise N8nConnectionError(f"Could not connect to n8n at {self.base_url}: {exc}") from exc
         except requests.Timeout as exc:
             raise N8nConnectionError(
                 f"Request to n8n timed out after {self.timeout}s: {exc}"
@@ -70,14 +68,11 @@ class N8nAPIClient:
 
         if resp.status_code in (401, 403):
             raise N8nAuthError(
-                f"Authentication failed (HTTP {resp.status_code}). "
-                "Check your API key."
+                f"Authentication failed (HTTP {resp.status_code}). Check your API key."
             )
 
         if not resp.ok:
-            raise N8nAPIError(
-                f"n8n API returned HTTP {resp.status_code}: {resp.text}"
-            )
+            raise N8nAPIError(f"n8n API returned HTTP {resp.status_code}: {resp.text}")
 
         return resp.json()
 

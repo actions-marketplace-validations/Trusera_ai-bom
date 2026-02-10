@@ -25,44 +25,47 @@ def db_path(tmp_path: Path) -> Path:
 
 
 def _sample_summary() -> str:
-    return json.dumps({
-        "total_components": 2,
-        "total_files_scanned": 1,
-        "by_type": {"llm_provider": 1, "model": 1},
-        "by_provider": {"openai": 2},
-        "by_severity": {"high": 1, "low": 1},
-        "highest_risk_score": 75,
-        "scan_duration_seconds": 1.5,
-    })
+    return json.dumps(
+        {
+            "total_components": 2,
+            "total_files_scanned": 1,
+            "by_type": {"llm_provider": 1, "model": 1},
+            "by_provider": {"openai": 2},
+            "by_severity": {"high": 1, "low": 1},
+            "highest_risk_score": 75,
+            "scan_duration_seconds": 1.5,
+        }
+    )
 
 
 def _sample_components() -> str:
-    return json.dumps([
-        {
-            "name": "openai",
-            "type": "llm_provider",
-            "provider": "openai",
-            "risk": {"score": 75, "severity": "high", "factors": []},
-            "location": {"file_path": "app.py", "line_number": 10},
-        },
-        {
-            "name": "gpt-4",
-            "type": "model",
-            "provider": "openai",
-            "risk": {"score": 30, "severity": "low", "factors": []},
-            "location": {"file_path": "app.py", "line_number": 15},
-        },
-    ])
+    return json.dumps(
+        [
+            {
+                "name": "openai",
+                "type": "llm_provider",
+                "provider": "openai",
+                "risk": {"score": 75, "severity": "high", "factors": []},
+                "location": {"file_path": "app.py", "line_number": 10},
+            },
+            {
+                "name": "gpt-4",
+                "type": "model",
+                "provider": "openai",
+                "risk": {"score": 30, "severity": "low", "factors": []},
+                "location": {"file_path": "app.py", "line_number": 15},
+            },
+        ]
+    )
 
 
 class TestInitDb:
     def test_creates_tables(self, db_path: Path) -> None:
         """init_db should create the scans table."""
         import sqlite3
+
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='scans'"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scans'")
         assert cursor.fetchone() is not None
         conn.close()
 

@@ -142,9 +142,7 @@ class MCPConfigScanner(BaseScanner):
                 if not isinstance(server_config, dict):
                     continue
 
-                component = self._create_server_component(
-                    server_name, server_config, file_path
-                )
+                component = self._create_server_component(server_name, server_config, file_path)
                 if component:
                     components.append(component)
 

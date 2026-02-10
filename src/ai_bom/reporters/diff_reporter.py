@@ -47,9 +47,7 @@ def load_scan_from_file(file_path: str | Path) -> ScanResult:
 
     # Handle both raw ScanResult JSON and CycloneDX format
     if "bomFormat" in data:
-        raise ValueError(
-            "CycloneDX format not supported for diff. Use JSON scan output instead."
-        )
+        raise ValueError("CycloneDX format not supported for diff. Use JSON scan output instead.")
 
     return ScanResult.model_validate(data)
 
@@ -67,12 +65,8 @@ def compare_scans(scan1: ScanResult, scan2: ScanResult) -> DiffResult:
     result = DiffResult()
 
     # Build component maps by name+type for easier comparison
-    scan1_map = {
-        (c.name, c.type.value, c.provider): c for c in scan1.components
-    }
-    scan2_map = {
-        (c.name, c.type.value, c.provider): c for c in scan2.components
-    }
+    scan1_map = {(c.name, c.type.value, c.provider): c for c in scan1.components}
+    scan2_map = {(c.name, c.type.value, c.provider): c for c in scan2.components}
 
     scan1_keys = set(scan1_map.keys())
     scan2_keys = set(scan2_map.keys())
@@ -189,15 +183,14 @@ def format_diff_as_table(diff: DiffResult) -> str:
         lines.append("MODIFIED COMPONENTS (Risk Score Changes)")
         lines.append("-" * 80)
         for comp in diff.modified_components:
-            change = comp['new_risk_score'] - comp['old_risk_score']
+            change = comp["new_risk_score"] - comp["old_risk_score"]
             direction = "increased" if change > 0 else "decreased"
             lines.append(
                 f"  ~ {comp['name']} ({comp['type']}) - "
                 f"Risk {direction}: {comp['old_risk_score']} -> {comp['new_risk_score']}"
             )
             lines.append(
-                f"    Severity: {comp['old_severity'].upper()} -> "
-                f"{comp['new_severity'].upper()}"
+                f"    Severity: {comp['old_severity'].upper()} -> {comp['new_severity'].upper()}"
             )
             lines.append(f"    Location: {comp['location']}")
         lines.append("")
@@ -250,7 +243,7 @@ def format_diff_as_markdown(diff: DiffResult) -> str:
     if diff.modified_components:
         lines.append("## Modified Components\n")
         for comp in diff.modified_components:
-            change = comp['new_risk_score'] - comp['old_risk_score']
+            change = comp["new_risk_score"] - comp["old_risk_score"]
             direction = "increased" if change > 0 else "decreased"
             emoji = ":warning:" if change > 0 else ":white_check_mark:"
             lines.append(
@@ -258,8 +251,7 @@ def format_diff_as_markdown(diff: DiffResult) -> str:
                 f"Risk {direction}: {comp['old_risk_score']} → {comp['new_risk_score']}"
             )
             lines.append(
-                f"  - Severity: {comp['old_severity'].upper()} → "
-                f"{comp['new_severity'].upper()}"
+                f"  - Severity: {comp['old_severity'].upper()} → {comp['new_severity'].upper()}"
             )
             lines.append(f"  - Location: `{comp['location']}`")
         lines.append("")
