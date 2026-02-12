@@ -40,7 +40,7 @@ console = Console()
 logger = logging.getLogger("ai_bom")
 
 
-def _send_telemetry(result: "ScanResult", scan_type: str) -> None:
+def _send_telemetry(result: ScanResult, scan_type: str) -> None:
     """Send anonymous telemetry data if opted in via AI_BOM_TELEMETRY=true.
 
     Non-blocking: runs in a background thread. Fails silently on any error.
