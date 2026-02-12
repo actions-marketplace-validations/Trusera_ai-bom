@@ -53,13 +53,15 @@ def _send_telemetry(result: ScanResult, scan_type: str) -> None:
         try:
             import urllib.request
 
-            payload = json.dumps({
-                "scan_type": scan_type,
-                "component_counts": dict(result.summary.by_type),
-                "severity_counts": dict(result.summary.by_severity),
-                "scanner_version": result.ai_bom_version,
-                "timestamp": result.scan_timestamp,
-            }).encode("utf-8")
+            payload = json.dumps(
+                {
+                    "scan_type": scan_type,
+                    "component_counts": dict(result.summary.by_type),
+                    "severity_counts": dict(result.summary.by_severity),
+                    "scanner_version": result.ai_bom_version,
+                    "timestamp": result.scan_timestamp,
+                }
+            ).encode("utf-8")
 
             req = urllib.request.Request(
                 "https://api.trusera.dev/api/v1/telemetry",
