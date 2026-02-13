@@ -1,1 +1,20 @@
+# AI-BOM Code Owners
+# These owners will be requested for review on PRs
+
+# Default owners for everything
 * @Zie619
+
+# Scanners
+/src/ai_bom/scanners/ @Zie619
+
+# Reporters
+/src/ai_bom/reporters/ @Zie619
+
+# CI/CD
+/.github/ @Zie619
+
+# Documentation
+/docs/ @Zie619
+
+# VS Code Extension
+/vscode-extension/ @Zie619
