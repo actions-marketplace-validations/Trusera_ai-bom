@@ -2,6 +2,9 @@ name: Publish VS Code Extension
 on:
   push:
     tags: ['vscode-v*']
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest

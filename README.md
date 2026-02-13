@@ -396,7 +396,7 @@ jobs:
   ai-bom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan for AI components
         uses: trusera/ai-bom@main
@@ -422,7 +422,7 @@ jobs:
   ai-bom:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install AI-BOM
         run: pipx install ai-bom
@@ -431,7 +431,7 @@ jobs:
         run: ai-bom scan . --fail-on critical --quiet -f sarif -o results.sarif
 
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: results.sarif
         if: always()
