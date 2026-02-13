@@ -136,6 +136,7 @@ export class TruseraInterceptor {
 
     if (originalFetch !== null) {
       globalThis.fetch = originalFetch;
+      originalFetch = null; // Reset for next install
     }
 
     activeInterceptor = null;

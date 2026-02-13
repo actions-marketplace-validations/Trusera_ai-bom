@@ -1,8 +1,10 @@
 """Trusera SDK for monitoring AI agents."""
 
+from .cedar import CedarEvaluator, PolicyDecision, PolicyAction, EvaluationResult
 from .client import TruseraClient
 from .decorators import get_default_client, monitor, set_default_client
 from .events import Event, EventType
+from .standalone import StandaloneInterceptor, RequestBlockedError
 
 __version__ = "0.1.0"
 
@@ -13,4 +15,10 @@ __all__ = [
     "monitor",
     "set_default_client",
     "get_default_client",
+    "StandaloneInterceptor",
+    "RequestBlockedError",
+    "CedarEvaluator",
+    "PolicyDecision",
+    "PolicyAction",
+    "EvaluationResult",
 ]

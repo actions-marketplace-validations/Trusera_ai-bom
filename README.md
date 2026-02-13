@@ -23,6 +23,7 @@
   <p>
     <a href="#quick-start">Quick Start</a> &nbsp;|&nbsp;
     <a href="#agent-sdks">Agent SDKs</a> &nbsp;|&nbsp;
+    <a href="#standalone-vs-platform">Standalone vs Platform</a> &nbsp;|&nbsp;
     <a href="#n8n-community-node">n8n Node</a> &nbsp;|&nbsp;
     <a href="#what-it-finds">What It Finds</a> &nbsp;|&nbsp;
     <a href="#comparison">Comparison</a> &nbsp;|&nbsp;
@@ -139,6 +140,65 @@ const interceptor = new TruseraInterceptor();
 interceptor.install(client, { enforcement: "warn" });
 // All fetch() calls are now monitored
 ```
+
+### Standalone Mode (No API Key Required)
+
+All SDKs work **without** a Trusera account — local Cedar policy enforcement + JSONL event logging:
+
+```python
+# Python — standalone, zero platform dependency
+from trusera_sdk import StandaloneInterceptor
+
+with StandaloneInterceptor(
+    policy_file=".cedar/ai-policy.cedar",
+    enforcement="block",
+    log_file="agent-events.jsonl",
+):
+    # All HTTP calls are now policy-checked and logged locally
+    agent.run()
+```
+
+```typescript
+// TypeScript — standalone mode
+import { StandaloneInterceptor } from "trusera-sdk";
+
+const interceptor = new StandaloneInterceptor({
+  policyFile: ".cedar/ai-policy.cedar",
+  enforcement: "block",
+  logFile: "agent-events.jsonl",
+});
+interceptor.install();
+// All fetch() calls are now policy-checked and logged locally
+```
+
+```go
+// Go — standalone mode
+interceptor, _ := trusera.NewStandaloneInterceptor(
+    trusera.WithPolicyFile("policy.cedar"),
+    trusera.WithEnforcement(trusera.EnforcementBlock),
+    trusera.WithLogFile("events.jsonl"),
+)
+defer interceptor.Close()
+httpClient := interceptor.WrapClient(http.DefaultClient)
+```
+
+### Standalone vs Platform
+
+| Feature | Standalone (free, open source) | Platform (paid) |
+|---------|-------------------------------|-----------------|
+| Scan codebases for AI components | Yes | Yes |
+| Cedar policy gates in CI/CD | Yes | Yes |
+| VS Code extension | Yes | Yes |
+| n8n workflow scanning | Yes | Yes |
+| Runtime HTTP interception | Yes | Yes |
+| Local policy enforcement | Yes | Yes |
+| Local JSONL event logging | Yes | Yes |
+| Centralized dashboard | — | Yes |
+| Team collaboration & RBAC | — | Yes |
+| Alerts (Slack, Jira, SIEM) | — | Yes |
+| Historical trends & analytics | — | Yes |
+| Compliance reports (EU AI Act) | — | Yes |
+| SSO & API key management | — | Yes |
 
 **Framework integrations:** LangChain, CrewAI, AutoGen (Python) | LangChain.js (TypeScript)
 

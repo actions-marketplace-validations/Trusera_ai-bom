@@ -4,6 +4,12 @@ import pytest
 from unittest.mock import Mock, MagicMock
 import httpx
 
+try:
+    from pytest_httpx import HTTPXMock
+    HTTPX_MOCK_AVAILABLE = True
+except ImportError:
+    HTTPX_MOCK_AVAILABLE = False
+
 from trusera_sdk import TruseraClient
 
 
@@ -48,3 +54,30 @@ def mock_response():
     response.json.return_value = {"status": "ok"}
     response.raise_for_status = Mock()
     return response
+
+
+@pytest.fixture
+def httpx_mock():
+    """
+    Mock httpx requests using pytest-httpx if available.
+
+    Falls back to a simple mock if pytest-httpx is not installed.
+    """
+    if HTTPX_MOCK_AVAILABLE:
+        mock = HTTPXMock()
+        yield mock
+    else:
+        # Simple fallback mock for when pytest-httpx is not installed
+        class SimpleMock:
+            def __init__(self):
+                self.responses = []
+
+            def add_response(self, url=None, status_code=200, text="", **kwargs):
+                self.responses.append({
+                    "url": url,
+                    "status_code": status_code,
+                    "text": text,
+                    **kwargs
+                })
+
+        yield SimpleMock()
