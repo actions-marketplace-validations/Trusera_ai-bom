@@ -145,7 +145,8 @@ class CLIReporter(BaseReporter):
 
                 # Highlight API keys/credentials with red
                 comp_name_style = type_color
-                if any(flag in comp.flags for flag in ["hardcoded_api_key", "hardcoded_credentials", "api_key_detected"]):
+                cred_flags = {"hardcoded_api_key", "hardcoded_credentials", "api_key_detected"}
+                if any(flag in comp.flags for flag in cred_flags):
                     comp_name_style = "bold red"
 
                 location = comp.location.file_path
