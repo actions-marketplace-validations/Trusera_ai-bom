@@ -7,13 +7,21 @@ Used in CI pipelines (GitHub Actions, GitLab CI) to enforce security
 policies on discovered AI/LLM components.
 
 Supported policy patterns:
+  - forbid (principal, action, resource) when { ... };
+  - forbid (principal, action == Action::"deploy", resource) when { ... };
   - forbid ... when { resource.severity == "critical" };
   - forbid ... when { resource.provider == "DeepSeek" };
   - forbid ... when { resource.component_type == "llm-api" };
   - forbid ... when { resource.risk_score > 75 };
 
 Usage:
-  python3 cedar-gate.py <scan-results.json> <policy.cedar> [--summary <path>]
+  python3 cedar-gate.py <scan-results.json> <policy.cedar> [options]
+
+Options:
+  --summary <path>          Write violation report to file (GitHub Actions summary)
+  --fail-on-severity <sev>  Only fail on violations at or above this severity
+  --annotations             Emit GitHub Actions annotations (::error, ::warning)
+  --entities <path>         Path to Cedar entities JSON file for additional context
 
 Exit codes:
   0 = all policies passed
@@ -23,6 +31,7 @@ Exit codes:
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -50,14 +59,24 @@ class Violation:
     component_name: str
     component_type: str
     actual_value: Any
+    severity: str = ""
+    file_path: str = ""
+    line_number: int = 0
 
 
 SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0, "none": 0}
 
 # Regex patterns for Cedar-like policy syntax
-# Matches: forbid ( principal, action == Action::"deploy", resource ) when { ... };
-RULE_PATTERN = re.compile(
+# Pattern 1: forbid (principal, action == Action::"deploy", resource) when { ... };
+RULE_PATTERN_TYPED = re.compile(
     r'forbid\s*\(\s*principal\s*,\s*action\s*==\s*Action::"(\w+)"\s*,\s*resource\s*\)'
+    r'\s*when\s*\{([^}]+)\}\s*;',
+    re.MULTILINE | re.DOTALL,
+)
+
+# Pattern 2: forbid (principal, action, resource) when { ... };
+RULE_PATTERN_SIMPLE = re.compile(
+    r'forbid\s*\(\s*principal\s*,\s*action\s*,\s*resource\s*\)'
     r'\s*when\s*\{([^}]+)\}\s*;',
     re.MULTILINE | re.DOTALL,
 )
@@ -76,7 +95,8 @@ def parse_policy(policy_text: str) -> list[PolicyRule]:
     # Strip comments (// style)
     cleaned = re.sub(r'//[^\n]*', '', policy_text)
 
-    for match in RULE_PATTERN.finditer(cleaned):
+    # Match typed action rules: action == Action::"deploy"
+    for match in RULE_PATTERN_TYPED.finditer(cleaned):
         action = match.group(1)
         body = match.group(2).strip()
 
@@ -85,15 +105,7 @@ def parse_policy(policy_text: str) -> list[PolicyRule]:
             operator = cond.group(2)
             raw_value = cond.group(3).strip()
 
-            # Try to parse as number
-            try:
-                value: str | int | float = int(raw_value)
-            except ValueError:
-                try:
-                    value = float(raw_value)
-                except ValueError:
-                    value = raw_value
-
+            value = _parse_value(raw_value)
             rules.append(
                 PolicyRule(
                     action=action,
@@ -104,7 +116,38 @@ def parse_policy(policy_text: str) -> list[PolicyRule]:
                 )
             )
 
+    # Match simple rules: (principal, action, resource)
+    for match in RULE_PATTERN_SIMPLE.finditer(cleaned):
+        body = match.group(1).strip()
+
+        for cond in CONDITION_PATTERN.finditer(body):
+            field_name = cond.group(1)
+            operator = cond.group(2)
+            raw_value = cond.group(3).strip()
+
+            value = _parse_value(raw_value)
+            rules.append(
+                PolicyRule(
+                    action="*",
+                    field=field_name,
+                    operator=operator,
+                    value=value,
+                    raw=match.group(0).strip(),
+                )
+            )
+
     return rules
+
+
+def _parse_value(raw_value: str) -> str | int | float:
+    """Try to parse a value as number, fall back to string."""
+    try:
+        return int(raw_value)
+    except ValueError:
+        try:
+            return float(raw_value)
+        except ValueError:
+            return raw_value
 
 
 def evaluate_condition(rule: PolicyRule, component: dict[str, Any]) -> bool:
@@ -175,26 +218,63 @@ def evaluate_condition(rule: PolicyRule, component: dict[str, Any]) -> bool:
 
 
 def evaluate(
-    components: list[dict[str, Any]], rules: list[PolicyRule]
+    components: list[dict[str, Any]],
+    rules: list[PolicyRule],
+    entities: dict[str, Any] | None = None,
 ) -> list[Violation]:
     """Evaluate all components against all rules. Returns list of violations."""
     violations: list[Violation] = []
 
+    # Merge entity attributes into components if entities file provided
+    entity_map: dict[str, dict[str, Any]] = {}
+    if entities:
+        for entity in entities.get("entities", []):
+            uid = entity.get("uid", {})
+            entity_id = uid.get("id", "") if isinstance(uid, dict) else str(uid)
+            if entity_id:
+                entity_map[entity_id] = entity.get("attrs", {})
+
     for component in components:
+        # Enrich component with entity attributes if available
+        enriched = dict(component)
+        comp_name = component.get("name", "")
+        if comp_name in entity_map:
+            for k, v in entity_map[comp_name].items():
+                if k not in enriched:
+                    enriched[k] = v
+
         for rule in rules:
-            if evaluate_condition(rule, component):
+            if evaluate_condition(rule, enriched):
                 violations.append(
                     Violation(
                         rule=rule,
-                        component_name=component.get("name", "unknown"),
-                        component_type=component.get("component_type", "unknown"),
-                        actual_value=component.get(
-                            rule.field, component.get(rule.field, "N/A")
-                        ),
+                        component_name=enriched.get("name", "unknown"),
+                        component_type=enriched.get("component_type", "unknown"),
+                        actual_value=enriched.get(rule.field, "N/A"),
+                        severity=str(enriched.get("severity", "")).lower(),
+                        file_path=enriched.get("file_path", ""),
+                        line_number=enriched.get("line_number", 0),
                     )
                 )
 
     return violations
+
+
+def filter_by_severity(
+    violations: list[Violation], min_severity: str
+) -> list[Violation]:
+    """Filter violations to only include those at or above the given severity."""
+    threshold = SEVERITY_ORDER.get(min_severity.lower(), 0)
+    if threshold == 0:
+        return violations
+
+    filtered = []
+    for v in violations:
+        # Determine the severity of the violation
+        sev = v.severity or "none"
+        if SEVERITY_ORDER.get(sev, 0) >= threshold:
+            filtered.append(v)
+    return filtered
 
 
 def extract_components(scan_data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -225,6 +305,14 @@ def extract_components(scan_data: dict[str, Any]) -> list[dict[str, Any]]:
                     "provider": result.get("properties", {}).get("provider", "unknown"),
                     "risk_score": result.get("properties", {}).get("risk_score", 0),
                 }
+                # Extract file location from SARIF
+                locations = result.get("locations", [])
+                if locations:
+                    phys = locations[0].get("physicalLocation", {})
+                    artifact = phys.get("artifactLocation", {})
+                    comp["file_path"] = artifact.get("uri", "")
+                    region = phys.get("region", {})
+                    comp["line_number"] = region.get("startLine", 0)
                 components.append(comp)
         return components
 
@@ -270,22 +358,52 @@ def format_violation_report(violations: list[Violation]) -> str:
     return "\n".join(lines)
 
 
-def main() -> int:
-    if len(sys.argv) < 3:
-        print(
-            "Usage: cedar-gate.py <scan-results.json> <policy.cedar> [--summary <path>]",
-            file=sys.stderr,
+def emit_annotations(violations: list[Violation]) -> None:
+    """Emit GitHub Actions annotations for each violation."""
+    for v in violations:
+        level = "error" if v.severity in ("critical", "high") else "warning"
+        msg = (
+            f"Policy violation: {v.component_name} ({v.component_type}) — "
+            f"resource.{v.rule.field} {v.rule.operator} {v.rule.value} "
+            f"(actual: {v.actual_value})"
         )
-        return 2
+        if v.file_path and v.line_number:
+            print(f"::{level} file={v.file_path},line={v.line_number}::{msg}")
+        elif v.file_path:
+            print(f"::{level} file={v.file_path}::{msg}")
+        else:
+            print(f"::{level} ::{msg}")
 
-    results_path = Path(sys.argv[1])
-    policy_path = Path(sys.argv[2])
 
-    summary_path: Path | None = None
-    if "--summary" in sys.argv:
-        idx = sys.argv.index("--summary")
-        if idx + 1 < len(sys.argv):
-            summary_path = Path(sys.argv[idx + 1])
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Cedar-like policy gate for AI-BOM scan results"
+    )
+    parser.add_argument("results", help="Path to scan results JSON file")
+    parser.add_argument("policy", help="Path to Cedar policy file")
+    parser.add_argument("--summary", help="Path to write violation report")
+    parser.add_argument(
+        "--fail-on-severity",
+        choices=["critical", "high", "medium", "low"],
+        help="Only fail on violations at or above this severity",
+    )
+    parser.add_argument(
+        "--annotations",
+        action="store_true",
+        help="Emit GitHub Actions ::error/::warning annotations",
+    )
+    parser.add_argument(
+        "--entities",
+        help="Path to Cedar entities JSON file for additional context",
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+
+    results_path = Path(args.results)
+    policy_path = Path(args.policy)
 
     # Load scan results
     if not results_path.exists():
@@ -305,6 +423,16 @@ def main() -> int:
 
     policy_text = policy_path.read_text(encoding="utf-8")
 
+    # Load entities (optional)
+    entities: dict[str, Any] | None = None
+    if args.entities:
+        entities_path = Path(args.entities)
+        if entities_path.exists():
+            try:
+                entities = json.loads(entities_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as e:
+                print(f"Warning: invalid JSON in entities file: {e}", file=sys.stderr)
+
     # Parse
     rules = parse_policy(policy_text)
     if not rules:
@@ -320,14 +448,23 @@ def main() -> int:
     print(f"Evaluating {len(rules)} rule(s) against {len(components)} component(s)...")
 
     # Evaluate
-    violations = evaluate(components, rules)
+    violations = evaluate(components, rules, entities)
+
+    # Filter by severity threshold if specified
+    if args.fail_on_severity and violations:
+        violations = filter_by_severity(violations, args.fail_on_severity)
 
     if violations:
         report = format_violation_report(violations)
         print(report)
 
+        # Emit GitHub Actions annotations
+        if args.annotations:
+            emit_annotations(violations)
+
         # Write GitHub Actions summary if path provided
-        if summary_path:
+        if args.summary:
+            summary_path = Path(args.summary)
             with open(summary_path, "a", encoding="utf-8") as f:
                 f.write(report)
                 f.write("\n")

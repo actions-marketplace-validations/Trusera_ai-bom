@@ -44,6 +44,10 @@ inputs:
     description: "Enable Cedar policy gate evaluation (requires cedar-policy-file)"
     required: false
     default: "false"
+  fail-on-severity:
+    description: "Cedar gate: only fail on violations at or above this severity (critical, high, medium, low)"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -116,6 +120,17 @@ runs:
         echo "Evaluating Cedar policy: ${{ inputs.cedar-policy-file }}"
 
         GATE_ARGS="${{ steps.policy-scan.outputs.policy_results }} ${{ inputs.cedar-policy-file }}"
+        GATE_ARGS="$GATE_ARGS --annotations"
+
+        # Cedar-specific severity threshold
+        if [ -n "${{ inputs.fail-on-severity }}" ]; then
+          GATE_ARGS="$GATE_ARGS --fail-on-severity ${{ inputs.fail-on-severity }}"
+        fi
+
+        # Cedar entities file
+        if [ -n "${{ inputs.cedar-entities-file }}" ]; then
+          GATE_ARGS="$GATE_ARGS --entities ${{ inputs.cedar-entities-file }}"
+        fi
 
         # Write violations to GitHub Actions job summary
         if [ -n "$GITHUB_STEP_SUMMARY" ]; then
