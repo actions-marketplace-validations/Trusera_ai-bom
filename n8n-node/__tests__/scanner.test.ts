@@ -72,7 +72,7 @@ describe('scanWorkflow', () => {
     const anthropic = components.find((c) => c.name === 'Anthropic Model');
     expect(anthropic).toBeDefined();
     expect(anthropic!.provider).toBe('Anthropic');
-    expect(anthropic!.flags).toContain('hardcoded_credentials');
+    expect(anthropic!.flags).toContain('hardcoded_api_key');
   });
 
   it('should detect the AI Agent node', () => {
@@ -109,7 +109,7 @@ describe('scanWorkflow', () => {
       c.name.includes('API Key in HTTP Request'),
     );
     expect(httpKeyComponent).toBeDefined();
-    expect(httpKeyComponent!.flags).toContain('hardcoded_credentials');
+    expect(httpKeyComponent!.flags).toContain('hardcoded_api_key');
   });
 
   it('should detect dangerous code in code base node', () => {

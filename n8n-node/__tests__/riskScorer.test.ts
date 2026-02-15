@@ -70,8 +70,8 @@ describe('scoreComponent', () => {
     });
 
     const risk = scoreComponent(component);
-    // Both the flag and the model check add weight
-    expect(risk.score).toBe(RISK_WEIGHTS['deprecated_model'] * 2);
+    // Flag is counted once (deduplication prevents double-counting)
+    expect(risk.score).toBe(RISK_WEIGHTS['deprecated_model']);
   });
 
   it('should cap score at 100', () => {
