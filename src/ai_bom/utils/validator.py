@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import jsonschema
 from jsonschema import validate
 
 
@@ -14,7 +13,8 @@ def get_schema() -> dict[str, Any]:
     """Load the AI-BOM JSON schema."""
     schema_path = Path(__file__).parent.parent / "schema" / "bom-schema.json"
     with open(schema_path, encoding="utf-8") as f:
-        return json.load(f)
+        result: dict[str, Any] = json.load(f)
+        return result
 
 
 def validate_output(data: dict[str, Any]) -> None:
