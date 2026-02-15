@@ -239,6 +239,7 @@ class TestCycloneDXSchemaValidation:
     def test_cyclonedx_schema_validation(self, multi_component_result):
         """Test that output validates against CycloneDX schema."""
         from ai_bom.utils.validator import get_schema
+
         reporter = CycloneDXReporter()
         output = reporter.render(multi_component_result)
         parsed = json.loads(output)
