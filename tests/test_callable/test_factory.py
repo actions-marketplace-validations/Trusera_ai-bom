@@ -44,7 +44,14 @@ def _make_component(
 class TestAdapterRegistry:
     def test_all_providers_registered(self) -> None:
         expected = {
-            "openai", "anthropic", "google", "bedrock", "aws", "ollama", "mistral", "cohere",
+            "openai",
+            "anthropic",
+            "google",
+            "bedrock",
+            "aws",
+            "ollama",
+            "mistral",
+            "cohere",
         }
         assert set(ADAPTERS.keys()) == expected
 
@@ -554,9 +561,7 @@ class TestGoogleAdapterCall:
         ):
             from ai_bom.callable.adapters.google import GoogleAdapter
 
-            adapter = GoogleAdapter(
-                model_name="gemini-pro", provider="google", api_key="key-xyz"
-            )
+            adapter = GoogleAdapter(model_name="gemini-pro", provider="google", api_key="key-xyz")
             adapter("Prompt")
 
         mock_genai.configure.assert_called_once_with(api_key="key-xyz")
@@ -863,9 +868,7 @@ class TestOllamaAdapterBranches:
         with patch.dict(sys.modules, {"ollama": mock_ollama}):
             from ai_bom.callable.adapters.ollama import OllamaAdapter
 
-            adapter = OllamaAdapter(
-                model_name="llama3", provider="ollama", temperature=0.1
-            )
+            adapter = OllamaAdapter(model_name="llama3", provider="ollama", temperature=0.1)
             adapter("Hello")
 
         call_kwargs = mock_client.chat.call_args[1]
@@ -1288,9 +1291,7 @@ class TestAdapterRepr:
         assert adapter.__class__.__name__ == "OpenAIAdapter"
 
     def test_anthropic_adapter_properties(self) -> None:
-        comp = _make_component(
-            provider="anthropic", model_name="claude-3-5-haiku-20241022"
-        )
+        comp = _make_component(provider="anthropic", model_name="claude-3-5-haiku-20241022")
         adapter = create_callable(comp)
         assert adapter.model_name == "claude-3-5-haiku-20241022"
         assert adapter.provider == "anthropic"

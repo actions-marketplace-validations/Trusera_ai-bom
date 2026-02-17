@@ -16,7 +16,9 @@ class _FakeCallable:
 
     def __call__(self, prompt: str, **kwargs: Any) -> CallableResult:
         return CallableResult(
-            text=f"echo: {prompt}", model_name=self.model_name, provider=self.provider,
+            text=f"echo: {prompt}",
+            model_name=self.model_name,
+            provider=self.provider,
         )
 
 
