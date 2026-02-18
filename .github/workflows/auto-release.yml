@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GIT_TOKEN }}
 
       - name: Determine version bump from conventional commits
         id: bump
@@ -73,8 +73,8 @@ jobs:
             if echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:"; then
               HAS_BREAKING=true
             fi
-            # Check for feat commits
-            if echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:"; then
+            # Check for feat commits (skip ci/deps/build scopes — those don't warrant a release)
+            if echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)"; then
               HAS_FEAT=true
             fi
             # Check for fix commits
