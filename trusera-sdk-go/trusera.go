@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -66,11 +67,26 @@ func WithBatchSize(n int) Option {
 	}
 }
 
-// NewClient creates a Trusera monitoring client
+// envOrDefault returns the value of the environment variable named by key,
+// or fallback if the variable is not set or empty.
+func envOrDefault(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+// NewClient creates a Trusera monitoring client.
+// If apiKey is empty, falls back to the TRUSERA_API_KEY environment variable.
+// Base URL defaults to TRUSERA_API_URL env var, then https://api.trusera.io.
 func NewClient(apiKey string, opts ...Option) *Client {
+	if apiKey == "" {
+		apiKey = os.Getenv("TRUSERA_API_KEY")
+	}
+
 	c := &Client{
 		apiKey:     apiKey,
-		baseURL:    defaultBaseURL,
+		baseURL:    envOrDefault("TRUSERA_API_URL", defaultBaseURL),
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		events:     make([]Event, 0, defaultBatchSize),
 		flushSize:  defaultBatchSize,
