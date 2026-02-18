@@ -11,6 +11,52 @@ permissions:
   contents: write
   id-token: write
 
+env:
+  # Shared bump script sourced by each job
+  BUMP_SCRIPT: |
+    bump_version() {
+      local TAG_PATTERN="$1" PREFIX="$2" DIR="$3"
+      local LATEST_TAG=$(git tag --list "${TAG_PATTERN}" --sort=-v:refname | head -n1)
+
+      if [ -z "$LATEST_TAG" ]; then
+        echo "No tag matching '${TAG_PATTERN}' found. First release."
+        local COMMITS=$(git log --pretty=format:"%s" HEAD -- "$DIR")
+        local VERSION="0.0.0"
+      else
+        echo "Latest tag: $LATEST_TAG"
+        local COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- "$DIR")
+        local VERSION="${LATEST_TAG#${PREFIX}}"
+      fi
+
+      if [ -z "$COMMITS" ]; then
+        echo "skip=true" >> "$GITHUB_OUTPUT"; return
+      fi
+
+      local MAJOR=$(echo "$VERSION" | cut -d. -f1)
+      local MINOR=$(echo "$VERSION" | cut -d. -f2)
+      local PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+      local HAS_BREAKING=false HAS_FEAT=false HAS_FIX=false
+      while IFS= read -r msg; do
+        echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
+        echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:" && HAS_BREAKING=true
+        echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
+        echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
+      done <<< "$COMMITS"
+
+      echo "Breaking=$HAS_BREAKING Feat=$HAS_FEAT Fix=$HAS_FIX"
+
+      if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
+      elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
+      elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
+      else echo "No releasable commits. Skipping."; echo "skip=true" >> "$GITHUB_OUTPUT"; return; fi
+
+      local NEW="${MAJOR}.${MINOR}.${PATCH}"
+      echo "Bump: $VERSION → $NEW"
+      echo "skip=false" >> "$GITHUB_OUTPUT"
+      echo "version=$NEW" >> "$GITHUB_OUTPUT"
+    }
+
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -31,32 +77,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Helper: check if any files changed in a directory since a tag
           has_changes() {
-            local TAG_PATTERN="$1"
-            local DIR="$2"
+            local TAG_PATTERN="$1" DIR="$2"
             local LATEST_TAG=$(git tag --list "${TAG_PATTERN}" --sort=-v:refname | head -n1)
             if [ -z "$LATEST_TAG" ]; then
-              # No tag exists — check if directory has any files
-              if [ -d "$DIR" ]; then echo "true"; else echo "false"; fi
-              return
+              [ -d "$DIR" ] && echo "true" || echo "false"; return
             fi
             local CHANGED=$(git diff --name-only "${LATEST_TAG}..HEAD" -- "$DIR" | head -1)
-            if [ -n "$CHANGED" ]; then echo "true"; else echo "false"; fi
+            [ -n "$CHANGED" ] && echo "true" || echo "false"
           }
 
-          echo "ai_bom=$(has_changes 'v[0-9]*' 'src/')" >> "$GITHUB_OUTPUT"
-          echo "agent_sdk=$(has_changes 'sdk-v*' 'trusera-agent-sdk/')" >> "$GITHUB_OUTPUT"
-          echo "sdk_js=$(has_changes 'js-v*' 'trusera-sdk-js/')" >> "$GITHUB_OUTPUT"
-          echo "sdk_go=$(has_changes 'go-v*' 'trusera-sdk-go/')" >> "$GITHUB_OUTPUT"
-          echo "n8n_node=$(has_changes 'n8n-v*' 'n8n-node/')" >> "$GITHUB_OUTPUT"
+          AI=$(has_changes 'v[0-9]*' 'src/')
+          SDK=$(has_changes 'sdk-v*' 'trusera-agent-sdk/')
+          JS=$(has_changes 'js-v*' 'trusera-sdk-js/')
+          GO=$(has_changes 'trusera-sdk-go/v*' 'trusera-sdk-go/')
+          N8N=$(has_changes 'n8n-v*' 'n8n-node/')
 
-          echo "=== Change detection ==="
-          echo "ai_bom=$(has_changes 'v[0-9]*' 'src/')"
-          echo "agent_sdk=$(has_changes 'sdk-v*' 'trusera-agent-sdk/')"
-          echo "sdk_js=$(has_changes 'js-v*' 'trusera-sdk-js/')"
-          echo "sdk_go=$(has_changes 'go-v*' 'trusera-sdk-go/')"
-          echo "n8n_node=$(has_changes 'n8n-v*' 'n8n-node/')"
+          echo "ai_bom=$AI" >> "$GITHUB_OUTPUT"
+          echo "agent_sdk=$SDK" >> "$GITHUB_OUTPUT"
+          echo "sdk_js=$JS" >> "$GITHUB_OUTPUT"
+          echo "sdk_go=$GO" >> "$GITHUB_OUTPUT"
+          echo "n8n_node=$N8N" >> "$GITHUB_OUTPUT"
+
+          echo "=== Changes: ai_bom=$AI agent_sdk=$SDK sdk_js=$JS sdk_go=$GO n8n=$N8N ==="
 
   # ─── ai-bom → PyPI (trusted publishing) ───
   release-ai-bom:
@@ -66,41 +109,13 @@ jobs:
     environment: pypi
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GIT_TOKEN }}
+        with: { fetch-depth: 0, token: "${{ secrets.GIT_TOKEN }}" }
 
       - name: Bump version
         id: bump
         run: |
-          set -euo pipefail
-          LATEST_TAG=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="v0.0.0"
-          COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- src/ pyproject.toml)
-          [ -z "$COMMITS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          VERSION="${LATEST_TAG#v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-          HAS_BREAKING=false; HAS_FEAT=false; HAS_FIX=false
-          while IFS= read -r msg; do
-            echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
-            echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
-          elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
-          elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
-          else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "ai-bom: $VERSION → $NEW"
+          eval "$BUMP_SCRIPT"
+          bump_version 'v[0-9]*' 'v' 'src/ pyproject.toml'
 
       - name: Update, commit, tag, push
         if: steps.bump.outputs.skip != 'true'
@@ -112,14 +127,13 @@ jobs:
           git add src/ai_bom/__init__.py
           git commit -m "chore(release): ai-bom v${V} [skip ci]"
           git tag "v${V}"
-          git push origin main
-          git push origin "v${V}"
+          git push origin main && git push origin "v${V}"
 
       - uses: actions/setup-python@v6
         if: steps.bump.outputs.skip != 'true'
         with: { python-version: "3.12" }
 
-      - name: Build & publish
+      - name: Build
         if: steps.bump.outputs.skip != 'true'
         run: pip install build && python -m build
 
@@ -135,40 +149,13 @@ jobs:
     environment: pypi
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GIT_TOKEN }}
+        with: { fetch-depth: 0, token: "${{ secrets.GIT_TOKEN }}" }
 
       - name: Bump version
         id: bump
         run: |
-          set -euo pipefail
-          LATEST_TAG=$(git tag --list 'sdk-v*' --sort=-v:refname | head -n1)
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="sdk-v0.0.0"
-          COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- trusera-agent-sdk/)
-          [ -z "$COMMITS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          VERSION="${LATEST_TAG#sdk-v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-          HAS_BREAKING=false; HAS_FEAT=false; HAS_FIX=false
-          while IFS= read -r msg; do
-            echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
-            echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
-          elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
-          elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
-          else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "agent-sdk: $VERSION → $NEW"
+          eval "$BUMP_SCRIPT"
+          bump_version 'sdk-v*' 'sdk-v' 'trusera-agent-sdk/'
 
       - name: Update, commit, tag, push
         if: steps.bump.outputs.skip != 'true'
@@ -181,14 +168,13 @@ jobs:
           git add trusera-agent-sdk/trusera_sdk/__init__.py trusera-agent-sdk/pyproject.toml
           git commit -m "chore(release): trusera-sdk v${V} [skip ci]"
           git tag "sdk-v${V}"
-          git push origin main
-          git push origin "sdk-v${V}"
+          git push origin main && git push origin "sdk-v${V}"
 
       - uses: actions/setup-python@v6
         if: steps.bump.outputs.skip != 'true'
         with: { python-version: "3.12" }
 
-      - name: Build & publish
+      - name: Build
         if: steps.bump.outputs.skip != 'true'
         run: cd trusera-agent-sdk && pip install build && python -m build
 
@@ -206,46 +192,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GIT_TOKEN }}
+        with: { fetch-depth: 0, token: "${{ secrets.GIT_TOKEN }}" }
 
       - name: Bump version
         id: bump
         run: |
-          set -euo pipefail
-          LATEST_TAG=$(git tag --list 'js-v*' --sort=-v:refname | head -n1)
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="js-v0.0.0"
-          COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- trusera-sdk-js/)
-          [ -z "$COMMITS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          VERSION="${LATEST_TAG#js-v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-          HAS_BREAKING=false; HAS_FEAT=false; HAS_FIX=false
-          while IFS= read -r msg; do
-            echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
-            echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
-          elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
-          elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
-          else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "sdk-js: $VERSION → $NEW"
+          eval "$BUMP_SCRIPT"
+          bump_version 'js-v*' 'js-v' 'trusera-sdk-js/'
 
       - uses: actions/setup-node@v6
         if: steps.bump.outputs.skip != 'true'
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
+        with: { node-version: 20, registry-url: "https://registry.npmjs.org" }
 
       - name: Update, commit, tag, push
         if: steps.bump.outputs.skip != 'true'
@@ -257,8 +214,7 @@ jobs:
           git add trusera-sdk-js/package.json
           git commit -m "chore(release): trusera-sdk-js v${V} [skip ci]"
           git tag "js-v${V}"
-          git push origin main
-          git push origin "js-v${V}"
+          git push origin main && git push origin "js-v${V}"
 
       - name: Build & publish to npm
         if: steps.bump.outputs.skip != 'true'
@@ -273,40 +229,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GIT_TOKEN }}
+        with: { fetch-depth: 0, token: "${{ secrets.GIT_TOKEN }}" }
 
       - name: Bump version
         id: bump
         run: |
-          set -euo pipefail
-          LATEST_TAG=$(git tag --list 'go-v*' --sort=-v:refname | head -n1)
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="go-v0.0.0"
-          COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- trusera-sdk-go/)
-          [ -z "$COMMITS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          VERSION="${LATEST_TAG#go-v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-          HAS_BREAKING=false; HAS_FEAT=false; HAS_FIX=false
-          while IFS= read -r msg; do
-            echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
-            echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
-          elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
-          elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
-          else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "sdk-go: $VERSION → $NEW"
+          eval "$BUMP_SCRIPT"
+          bump_version 'trusera-sdk-go/v*' 'trusera-sdk-go/v' 'trusera-sdk-go/'
 
       - name: Tag and push
         if: steps.bump.outputs.skip != 'true'
@@ -314,10 +243,9 @@ jobs:
           V="${{ steps.bump.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Go modules use the subdir path as tag prefix
           git tag "trusera-sdk-go/v${V}"
           git push origin "trusera-sdk-go/v${V}"
-          echo "Tagged trusera-sdk-go/v${V} — available via: go get github.com/Trusera/ai-bom/trusera-sdk-go@v${V}"
+          echo "Tagged trusera-sdk-go/v${V}"
 
   # ─── n8n-nodes-trusera → npm ───
   release-n8n-node:
@@ -326,46 +254,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GIT_TOKEN }}
+        with: { fetch-depth: 0, token: "${{ secrets.GIT_TOKEN }}" }
 
       - name: Bump version
         id: bump
         run: |
-          set -euo pipefail
-          LATEST_TAG=$(git tag --list 'n8n-v*' --sort=-v:refname | head -n1)
-          [ -z "$LATEST_TAG" ] && LATEST_TAG="n8n-v0.0.0"
-          COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- n8n-node/)
-          [ -z "$COMMITS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
-
-          VERSION="${LATEST_TAG#n8n-v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          MINOR=$(echo "$VERSION" | cut -d. -f2)
-          PATCH=$(echo "$VERSION" | cut -d. -f3)
-
-          HAS_BREAKING=false; HAS_FEAT=false; HAS_FIX=false
-          while IFS= read -r msg; do
-            echo "$msg" | grep -qi "BREAKING CHANGE" && HAS_BREAKING=true
-            echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^feat\((ci|deps|build|chore)\)" && HAS_FEAT=true
-            echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:" && ! echo "$msg" | grep -qE "^fix\((ci|deps|build|chore)\)" && HAS_FIX=true
-          done <<< "$COMMITS"
-
-          if [ "$HAS_BREAKING" = true ]; then MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0
-          elif [ "$HAS_FEAT" = true ]; then MINOR=$((MINOR+1)); PATCH=0
-          elif [ "$HAS_FIX" = true ]; then PATCH=$((PATCH+1))
-          else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW" >> "$GITHUB_OUTPUT"
-          echo "n8n-node: $VERSION → $NEW"
+          eval "$BUMP_SCRIPT"
+          bump_version 'n8n-v*' 'n8n-v' 'n8n-node/'
 
       - uses: actions/setup-node@v6
         if: steps.bump.outputs.skip != 'true'
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
+        with: { node-version: 20, registry-url: "https://registry.npmjs.org" }
 
       - name: Update, commit, tag, push
         if: steps.bump.outputs.skip != 'true'
@@ -377,8 +276,7 @@ jobs:
           git add n8n-node/package.json
           git commit -m "chore(release): n8n-nodes-trusera v${V} [skip ci]"
           git tag "n8n-v${V}"
-          git push origin main
-          git push origin "n8n-v${V}"
+          git push origin main && git push origin "n8n-v${V}"
 
       - name: Build & publish to npm
         if: steps.bump.outputs.skip != 'true'
