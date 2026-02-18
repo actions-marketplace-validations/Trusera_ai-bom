@@ -7,9 +7,10 @@ The official TypeScript/JavaScript SDK for monitoring AI agents with [Trusera](h
 
 ## Key Features
 
-- **Transparent HTTP Interception**: Zero-code instrumentation of all outbound HTTP calls
+- **Transparent HTTP Interception**: Zero-code instrumentation via `fetch`, `axios`, and `undici`
 - **Policy Enforcement**: Runtime evaluation against Cedar policies with configurable enforcement modes
-- **LangChain.js Integration**: First-class support for LangChain.js callbacks
+- **LangChain.js Integration**: First-class support for LangChain.js callbacks with optional Cedar enforcement
+- **ESM + CJS**: Dual-format output (built with tsup) -- works in any Node.js or Bun environment
 - **Rich Event Tracking**: Track LLM calls, tool executions, data access, and custom events
 - **Batched Transmission**: Automatic event batching and retry logic
 - **Type-Safe**: Full TypeScript support with strict typing
@@ -72,6 +73,54 @@ const model = new ChatOpenAI({
 await model.invoke("What are the top AI security risks?");
 
 await client.close();
+```
+
+### Axios and Undici Interception
+
+The interceptor automatically detects and patches `axios` and `undici` if they
+are installed. No additional configuration is needed:
+
+```typescript
+import axios from "axios";
+import { TruseraClient, TruseraInterceptor } from "trusera-sdk";
+
+const client = new TruseraClient({ apiKey: "tsk_xxx" });
+const interceptor = new TruseraInterceptor();
+interceptor.install(client, { enforcement: "warn" });
+
+// axios requests are now tracked automatically
+await axios.get("https://api.openai.com/v1/models");
+
+// undici requests too (if undici is installed)
+// import { request } from "undici";
+// await request("https://api.openai.com/v1/models");
+
+await client.close();
+interceptor.uninstall();
+```
+
+Libraries are detected via `require()` at install-time. If a library is not
+installed, it is silently skipped with no errors.
+
+### LangChain.js with Cedar Enforcement
+
+Add Cedar policy enforcement to tool and LLM calls:
+
+```typescript
+import { TruseraClient, TruseraLangChainHandler, CedarEvaluator } from "trusera-sdk";
+
+const evaluator = new CedarEvaluator();
+await evaluator.loadPolicy(`
+  forbid (principal, action == Action::"*", resource)
+  when { resource.hostname == "langchain" };
+`);
+
+const handler = new TruseraLangChainHandler(client, {
+  enforcement: "block",
+  cedarEvaluator: evaluator,
+});
+
+// Denied tool/LLM calls throw in block mode
 ```
 
 ### Manual Event Tracking
@@ -282,16 +331,27 @@ The SDK tracks six core event types:
 
 #### Methods
 
-- `install(client: TruseraClient, options?: InterceptorOptions): void`: Install HTTP interceptor
-- `uninstall(): void`: Restore original fetch and remove interceptor
+- `install(client: TruseraClient, options?: InterceptorOptions): void`: Install HTTP interceptor for `fetch`, `axios` (if available), and `undici` (if available)
+- `uninstall(): void`: Restore original fetch, eject axios interceptors, and restore undici functions
 
 ### `TruseraLangChainHandler`
 
 #### Methods
 
-- `constructor(client: TruseraClient)`: Create handler for LangChain callbacks
+- `constructor(client: TruseraClient, options?: LangChainHandlerOptions)`: Create handler for LangChain callbacks with optional Cedar enforcement
 - `getPendingEventCount(): number`: Get count of incomplete events
 - `clearPendingEvents(): void`: Clear all pending events
+
+#### LangChainHandlerOptions
+
+```typescript
+interface LangChainHandlerOptions {
+  enforcement?: "block" | "warn" | "log";
+  cedarEvaluator?: CedarEvaluator;
+}
+```
+
+When `enforcement` is `"block"` and a Cedar policy denies a tool/LLM call, the handler throws an `Error`. In `"warn"` mode it logs via `console.warn`. In `"log"` mode (default) violations are tracked silently.
 
 ### Utility Functions
 

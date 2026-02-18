@@ -186,6 +186,29 @@ event := trusera.NewEvent(trusera.EventDecision, "approve_transaction").
 
 ## Configuration Options
 
+### Environment Variables
+
+The Go SDK reads configuration from environment variables when explicit values
+are not provided:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TRUSERA_API_KEY` | API key (used when `apiKey` argument is `""`) | (none) |
+| `TRUSERA_API_URL` | Base URL for the Trusera API | `https://api.trusera.io` |
+
+```bash
+export TRUSERA_API_KEY=tsk_your_api_key
+export TRUSERA_API_URL=https://api.trusera.io
+```
+
+```go
+// Reads TRUSERA_API_KEY and TRUSERA_API_URL from environment
+client := trusera.NewClient("")
+defer client.Close()
+```
+
+Explicit values always take precedence over environment variables.
+
 ### Client Options
 
 ```go

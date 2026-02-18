@@ -252,7 +252,9 @@ client.track({ type: EventType.TOOL_CALL, name: 'search', payload: {} });
 ```
 
 **Modules**: `client.ts`, `events.ts`, `cedar.ts`, `interceptor.ts`, `standalone.ts`
-**Build**: `tsc` (TypeScript), outputs to `dist/`
+**Interception**: `fetch` (always), `axios` (optional), `undici` (optional) -- auto-detected at install-time
+**Integrations**: LangChain.js (`TruseraLangChainHandler` with optional Cedar enforcement)
+**Build**: `tsup` -- dual ESM (`dist/index.js`) + CJS (`dist/index.cjs`) with `.d.ts` declarations
 **Test**: `vitest`
 
 ### Go SDK (`trusera-sdk-go/`)
@@ -267,8 +269,9 @@ client.Track(trusera.Event{Type: trusera.ToolCall, Name: "search"})
 
 **Modules**: `trusera.go`, `events.go`, `cedar.go`, `interceptor.go`, `standalone.go`
 **Build**: standard Go modules (`go.mod` points to `github.com/Trusera/ai-bom/trusera-sdk-go`)
-**Test**: `go test ./...`
+**Test**: `go test ./...` (CI gate in auto-release.yml runs tests before tagging)
 **Version**: git tag only (`trusera-sdk-go/vX.Y.Z`), no version file
+**Env vars**: `TRUSERA_API_KEY` (fallback for empty apiKey), `TRUSERA_API_URL` (fallback for base URL)
 
 ---
 

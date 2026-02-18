@@ -69,14 +69,15 @@ Choose the SDK that matches your agent's language:
 |---------|--------|------------|-----|
 | **Package name** | `trusera-sdk` | `trusera-sdk` | `trusera-sdk-go` |
 | **Install command** | `pip install trusera-sdk` | `npm install trusera-sdk` | `go get github.com/Trusera/ai-bom/trusera-sdk-go` |
-| **HTTP Interception** | `@monitor` decorator | `fetch` monkey-patch | `http.RoundTripper` wrapper |
+| **HTTP Interception** | `@monitor` decorator | `fetch` + `axios` + `undici` | `http.RoundTripper` wrapper |
 | **LangChain Integration** | `TruseraCallbackHandler` | `TruseraLangChainHandler` | -- |
 | **CrewAI Integration** | `TruseraCrewCallback` (StepCallback) | -- | -- |
 | **AutoGen Integration** | `TruseraAutoGenHook` (MessageHook) | -- | -- |
 | **Enforcement Modes** | `log` / `warn` / `block` | `log` / `warn` / `block` | `log` / `warn` / `block` |
 | **Event Batching** | Thread-based queue | Timer-based queue | Goroutine-based queue |
 | **Async Support** | `asyncio` native | Native `Promise` / `async-await` | Goroutines |
-| **External Dependencies** | `httpx` | None (native `fetch`) | None (stdlib only) |
+| **Module Format** | -- | ESM + CJS (dual output via tsup) | -- |
+| **External Dependencies** | `httpx` | None (native `fetch`); optional `axios`, `undici` | None (stdlib only) |
 | **Min Runtime** | Python 3.9+ | Node.js 18+ | Go 1.21+ |
 | **Type Safety** | Type hints (mypy) | Full TypeScript generics | Static typing |
 | **Context Manager** | `with` statement | -- | `defer client.Close()` |
@@ -151,10 +152,14 @@ decorated function is called, the SDK captures input arguments, measures executi
 time, records the return value (or exception), and queues an event. A background
 thread flushes events to the Trusera API at configurable intervals.
 
-**TypeScript** -- The `TruseraInterceptor` replaces the global `fetch` function with
-a wrapper that captures request URL, method, headers, and body. After the real
-request completes, the SDK records the response status and queues an event. A
-`setInterval` timer drives periodic flushes.
+**TypeScript** -- The `TruseraInterceptor` patches up to three HTTP libraries
+automatically: native `fetch` (always available), `axios` (via request/response
+interceptors), and `undici` (via monkey-patching `request` and `fetch`). Libraries
+are detected at install-time using `require()` -- if absent, they are silently
+skipped. Each intercepted call captures URL, method, headers, and body; after the
+real request completes the SDK records the response status and queues an event. A
+`setInterval` timer drives periodic flushes. The SDK ships as both ESM and CJS
+(built with tsup) so it works in any Node.js or Bun environment.
 
 **Go** -- The SDK provides a custom `http.RoundTripper` that wraps the standard
 `http.Transport`. Every request passing through the wrapped `http.Client` is
@@ -293,8 +298,36 @@ await model.invoke("What are the top AI security risks?");
 await client.close();
 ```
 
+**With Cedar Policy Enforcement**:
+
+The handler supports optional Cedar policy enforcement for tool and LLM calls.
+Pass `enforcement` and a `cedarEvaluator` to activate runtime policy checks:
+
+```typescript
+import {
+  TruseraClient,
+  TruseraLangChainHandler,
+  CedarEvaluator,
+} from "trusera-sdk";
+
+const evaluator = new CedarEvaluator();
+await evaluator.loadPolicy(`
+  forbid (principal, action == Action::"*", resource)
+  when { resource.hostname == "langchain" };
+`);
+
+const handler = new TruseraLangChainHandler(client, {
+  enforcement: "block", // or "warn" or "log"
+  cedarEvaluator: evaluator,
+});
+
+// In block mode, denied tool/LLM calls throw:
+// Error: [Trusera] Policy violation: tool search denied - ...
+```
+
 **What gets tracked**: Same event types as the Python LangChain integration --
-`LLM_INVOKE`, `TOOL_CALL`, and `DECISION` events.
+`LLM_INVOKE`, `TOOL_CALL`, and `DECISION` events. When enforcement is active,
+`POLICY_VIOLATION` events are also tracked for denied actions.
 
 ---
 
@@ -1035,10 +1068,15 @@ client := trusera.NewClient("tsk_your_api_key",
 
 | Option Function | Type | Default | Description |
 |----------------|------|---------|-------------|
-| `WithBaseURL(url)` | `string` | `https://api.trusera.io` | API base URL |
+| `WithBaseURL(url)` | `string` | env `TRUSERA_API_URL` or `https://api.trusera.io` | API base URL |
 | `WithAgentID(id)` | `string` | `""` | Pre-registered agent ID |
 | `WithFlushInterval(d)` | `time.Duration` | `5s` | Duration between flushes |
 | `WithBatchSize(n)` | `int` | `100` | Maximum events per batch |
+
+**Environment Variable Fallbacks**: If the `apiKey` argument is empty,
+`NewClient` reads `TRUSERA_API_KEY`. The default base URL is read from
+`TRUSERA_API_URL` (falling back to `https://api.trusera.io`). Explicit
+`WithBaseURL()` overrides the environment variable.
 
 **Interceptor Options**:
 
@@ -1124,7 +1162,7 @@ identically in the Trusera dashboard.
 
 **Key differences**:
 - TypeScript `flush()` and `close()` return Promises; always `await` them.
-- The TypeScript SDK uses `fetch` interception instead of a decorator pattern.
+- The TypeScript SDK intercepts `fetch`, `axios`, and `undici` automatically.
   Wrap tool functions manually with `createEvent()` if you need per-function tracking.
 - CrewAI and AutoGen integrations are Python-only.
 
