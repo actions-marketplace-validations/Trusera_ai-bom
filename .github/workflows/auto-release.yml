@@ -1,0 +1,145 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    # Don't trigger on tag pushes to avoid infinite loops
+    tags-ignore:
+      - "**"
+
+permissions:
+  contents: write
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+
+    # Skip if this is a version bump commit (prevents re-triggering)
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version bump from conventional commits
+        id: bump
+        run: |
+          set -euo pipefail
+
+          # Find the latest v* tag (only semver tags, not sdk-v*, n8n-v*, vscode-v*)
+          LATEST_TAG=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing v* tag found. Using v0.0.0 as base."
+            LATEST_TAG="v0.0.0"
+            # Get all commits if no tag exists
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          else
+            echo "Latest tag: $LATEST_TAG"
+            # Get commits since the last tag
+            COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD")
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            echo "No commits since last tag. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "--- Commits since $LATEST_TAG ---"
+          echo "$COMMITS"
+          echo "---"
+
+          # Parse current version from tag
+          VERSION="${LATEST_TAG#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+          # Analyze commits for bump type
+          HAS_BREAKING=false
+          HAS_FEAT=false
+          HAS_FIX=false
+
+          while IFS= read -r msg; do
+            # Check for BREAKING CHANGE in commit body/footer marker in subject
+            if echo "$msg" | grep -qi "BREAKING CHANGE"; then
+              HAS_BREAKING=true
+            fi
+            # Check for type! (e.g. feat!: or fix!:)
+            if echo "$msg" | grep -qE "^[a-z]+(\(.+\))?!:"; then
+              HAS_BREAKING=true
+            fi
+            # Check for feat commits
+            if echo "$msg" | grep -qE "^feat(\(.+\))?[!]?:"; then
+              HAS_FEAT=true
+            fi
+            # Check for fix commits
+            if echo "$msg" | grep -qE "^fix(\(.+\))?[!]?:"; then
+              HAS_FIX=true
+            fi
+          done <<< "$COMMITS"
+
+          echo "Breaking: $HAS_BREAKING | Feat: $HAS_FEAT | Fix: $HAS_FIX"
+
+          # Determine bump type
+          if [ "$HAS_BREAKING" = true ]; then
+            BUMP="major"
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$HAS_FEAT" = true ]; then
+            BUMP="minor"
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          elif [ "$HAS_FIX" = true ]; then
+            BUMP="patch"
+            PATCH=$((PATCH + 1))
+          else
+            echo "No feat or fix commits since last tag. Skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "Bump type: $BUMP ($VERSION -> $NEW_VERSION)"
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "bump_type=$BUMP" >> "$GITHUB_OUTPUT"
+
+      - name: Update version in __init__.py
+        if: steps.bump.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          INIT_FILE="src/ai_bom/__init__.py"
+
+          echo "Updating $INIT_FILE to version $NEW_VERSION"
+
+          # Replace the __version__ line
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${NEW_VERSION}\"/" "$INIT_FILE"
+
+          # Verify the change
+          grep "__version__" "$INIT_FILE"
+
+      - name: Commit, tag, and push
+        if: steps.bump.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add src/ai_bom/__init__.py
+          git commit -m "chore(release): bump to v${NEW_VERSION} [skip ci]"
+          git tag "v${NEW_VERSION}"
+
+          git push origin main
+          git push origin "v${NEW_VERSION}"
+
+          echo "Released v${NEW_VERSION}"
