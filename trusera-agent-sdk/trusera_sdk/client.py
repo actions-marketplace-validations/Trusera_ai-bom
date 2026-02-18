@@ -65,7 +65,7 @@ class TruseraClient:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "trusera-sdk-python/0.1.0",
+                "User-Agent": "trusera-sdk-python/0.3.0",
             },
             timeout=self.timeout,
         )
