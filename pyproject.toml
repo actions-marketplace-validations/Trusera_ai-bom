@@ -16,6 +16,7 @@ keywords = [
     "ai", "bom", "security", "llm", "agents", "compliance",
     "n8n", "shadow-ai", "sbom", "ai-security", "devsecops",
     "mcp", "ai-agent", "cybersecurity", "red-teaming", "giskard",
+    "agentic-security", "eu-ai-act",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
