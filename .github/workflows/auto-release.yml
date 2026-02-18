@@ -15,16 +15,17 @@ env:
   # Shared bump script sourced by each job
   BUMP_SCRIPT: |
     bump_version() {
-      local TAG_PATTERN="$1" PREFIX="$2" DIR="$3"
+      local TAG_PATTERN="$1" PREFIX="$2"; shift 2
+      local DIRS="$*"
       local LATEST_TAG=$(git tag --list "${TAG_PATTERN}" --sort=-v:refname | head -n1)
 
       if [ -z "$LATEST_TAG" ]; then
         echo "No tag matching '${TAG_PATTERN}' found. First release."
-        local COMMITS=$(git log --pretty=format:"%s" HEAD -- "$DIR")
+        local COMMITS=$(git log --pretty=format:"%s" HEAD -- $DIRS)
         local VERSION="0.0.0"
       else
         echo "Latest tag: $LATEST_TAG"
-        local COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- "$DIR")
+        local COMMITS=$(git log --pretty=format:"%s" "${LATEST_TAG}..HEAD" -- $DIRS)
         local VERSION="${LATEST_TAG#${PREFIX}}"
       fi
 
@@ -116,7 +117,7 @@ jobs:
         id: bump
         run: |
           eval "$BUMP_SCRIPT"
-          bump_version 'v[0-9]*' 'v' 'src/ pyproject.toml'
+          bump_version 'v[0-9]*' 'v' src/ pyproject.toml
 
       - name: Update, commit, tag, push
         if: steps.bump.outputs.skip != 'true'
