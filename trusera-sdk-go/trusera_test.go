@@ -291,3 +291,66 @@ func TestClose(t *testing.T) {
 		t.Errorf("expected events to be flushed on close, got %d remaining", eventCount)
 	}
 }
+
+// ─── Environment variable configuration tests ─────────────────────────
+
+func TestEnvVarAPIKey(t *testing.T) {
+	t.Setenv("TRUSERA_API_KEY", "env-api-key-123")
+
+	client := NewClient("") // empty apiKey → should read env
+	defer client.Close()
+
+	if client.apiKey != "env-api-key-123" {
+		t.Errorf("expected apiKey from env 'env-api-key-123', got %s", client.apiKey)
+	}
+}
+
+func TestExplicitAPIKeyOverridesEnv(t *testing.T) {
+	t.Setenv("TRUSERA_API_KEY", "env-key")
+
+	client := NewClient("explicit-key")
+	defer client.Close()
+
+	if client.apiKey != "explicit-key" {
+		t.Errorf("expected explicit apiKey 'explicit-key', got %s", client.apiKey)
+	}
+}
+
+func TestEnvVarBaseURL(t *testing.T) {
+	t.Setenv("TRUSERA_API_URL", "https://custom.trusera.io")
+
+	client := NewClient("test-key")
+	defer client.Close()
+
+	if client.baseURL != "https://custom.trusera.io" {
+		t.Errorf("expected baseURL from env 'https://custom.trusera.io', got %s", client.baseURL)
+	}
+}
+
+func TestWithBaseURLOverridesEnv(t *testing.T) {
+	t.Setenv("TRUSERA_API_URL", "https://env.trusera.io")
+
+	client := NewClient("test-key", WithBaseURL("https://explicit.trusera.io"))
+	defer client.Close()
+
+	if client.baseURL != "https://explicit.trusera.io" {
+		t.Errorf("expected explicit baseURL 'https://explicit.trusera.io', got %s", client.baseURL)
+	}
+}
+
+func TestNoEnvVarsSetUsesDefaults(t *testing.T) {
+	// Clear any existing env vars
+	t.Setenv("TRUSERA_API_KEY", "")
+	t.Setenv("TRUSERA_API_URL", "")
+
+	client := NewClient("")
+	defer client.Close()
+
+	if client.apiKey != "" {
+		t.Errorf("expected empty apiKey, got %s", client.apiKey)
+	}
+
+	if client.baseURL != defaultBaseURL {
+		t.Errorf("expected default baseURL %s, got %s", defaultBaseURL, client.baseURL)
+	}
+}
