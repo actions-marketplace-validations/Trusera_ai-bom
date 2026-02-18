@@ -37,10 +37,18 @@
     "LICENSE"
   ],
   "peerDependencies": {
-    "langchain": ">=0.1.0"
+    "langchain": ">=0.1.0",
+    "axios": ">=1.0.0",
+    "undici": ">=5.0.0"
   },
   "peerDependenciesMeta": {
     "langchain": {
+      "optional": true
+    },
+    "axios": {
+      "optional": true
+    },
+    "undici": {
       "optional": true
     }
   },

@@ -46,12 +46,22 @@ let activeInterceptor: TruseraInterceptor | null = null;
 let originalFetch: typeof globalThis.fetch | null = null;
 
 /**
+ * Safely require an optional dependency.
+ * Returns null if the module is not installed.
+ */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+function tryRequire(moduleName: string): any { // eslint-disable-line @typescript-eslint/no-explicit-any
+  try {
+    return require(moduleName);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * HTTP interceptor for AI agent outbound traffic.
- * Monkey-patches globalThis.fetch to intercept all HTTP calls,
+ * Monkey-patches globalThis.fetch, axios, and undici to intercept all HTTP calls,
  * evaluate them against Cedar policies, and track events.
- *
- * This is the core differentiator of the Trusera SDK - transparent
- * runtime monitoring without code changes.
  *
  * @example
  * ```typescript
@@ -64,10 +74,10 @@ let originalFetch: typeof globalThis.fetch | null = null;
  *   excludePatterns: ["^https://api\\.trusera\\.io/.*"]
  * });
  *
- * // All fetch calls are now intercepted
+ * // All fetch/axios/undici calls are now intercepted
  * await fetch("https://api.github.com/repos/test"); // Tracked + policy-checked
  *
- * interceptor.uninstall(); // Restore original fetch
+ * interceptor.uninstall(); // Restore originals
  * ```
  */
 export class TruseraInterceptor {
@@ -81,8 +91,18 @@ export class TruseraInterceptor {
   private excludeRegexes: RegExp[] = [];
   private isInstalled = false;
 
+  // Axios interception state
+  private axiosDefault: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private axiosRequestId: number | null = null;
+  private axiosResponseId: number | null = null;
+
+  // Undici interception state
+  private undiciMod: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private origUndiciRequest: ((...args: any[]) => any) | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private origUndiciFetch: ((...args: any[]) => any) | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+
   /**
-   * Installs the HTTP interceptor by patching globalThis.fetch.
+   * Installs the HTTP interceptor by patching globalThis.fetch, axios, and undici.
    * Only one interceptor can be active at a time.
    *
    * @param client - TruseraClient instance for event tracking
@@ -119,6 +139,10 @@ export class TruseraInterceptor {
     activeInterceptor = this;
     this.isInstalled = true;
 
+    // Install optional library interceptors (graceful skip if not available)
+    this._installAxios();
+    this._installUndici();
+
     this.log("Interceptor installed", {
       enforcement: this.options.enforcement,
       policyUrl: this.options.policyUrl,
@@ -127,7 +151,7 @@ export class TruseraInterceptor {
   }
 
   /**
-   * Uninstalls the interceptor and restores original fetch.
+   * Uninstalls the interceptor and restores original fetch, axios, and undici.
    */
   uninstall(): void {
     if (!this.isInstalled) {
@@ -139,12 +163,267 @@ export class TruseraInterceptor {
       originalFetch = null; // Reset for next install
     }
 
+    this._uninstallAxios();
+    this._uninstallUndici();
+
     activeInterceptor = null;
     this.isInstalled = false;
     this.client = null;
 
     this.log("Interceptor uninstalled");
   }
+
+  // ─── Shared evaluation + tracking ───────────────────────────────────
+
+  /**
+   * Shared pre-request evaluation: checks excludes, evaluates Cedar policy,
+   * tracks API_CALL event, and returns whether the request should be blocked.
+   * Used by fetch, axios, and undici interceptors.
+   */
+  private async _evaluateAndTrack(
+    url: string,
+    method: string,
+    headers: Record<string, string>
+  ): Promise<{ blocked: boolean; reasons: string[] }> {
+    if (this.shouldExclude(url)) {
+      return { blocked: false, reasons: [] };
+    }
+
+    const eventName = this.generateEventName(url, method);
+
+    const event = createEvent(
+      EventType.API_CALL,
+      eventName,
+      { method, url, headers },
+      { interception_mode: this.options.enforcement }
+    );
+
+    // Evaluate policy if configured
+    if (this.options.policyUrl) {
+      const policyDecision = await this.evaluatePolicy(url, method, { headers, body: null });
+
+      if (policyDecision.decision === "Deny") {
+        this.log("Policy violation detected", { url, reasons: policyDecision.reasons });
+
+        const violationEvent = createEvent(
+          EventType.API_CALL,
+          `${eventName}.policy_violation`,
+          {
+            ...event.payload,
+            policy_decision: "Deny",
+            policy_reasons: policyDecision.reasons,
+          }
+        );
+        this.client?.track(violationEvent);
+
+        if (this.options.enforcement === "block") {
+          return { blocked: true, reasons: policyDecision.reasons ?? [] };
+        } else if (this.options.enforcement === "warn") {
+          console.warn(
+            `[Trusera] Policy violation (allowed): ${policyDecision.reasons?.join(", ") ?? "Request denied"}`
+          );
+        }
+      }
+    }
+
+    this.client?.track(event);
+    return { blocked: false, reasons: [] };
+  }
+
+  // ─── Axios interceptor ─────────────────────────────────────────────
+
+  private _installAxios(): void {
+    const axios = tryRequire("axios");
+    if (!axios?.interceptors) return;
+
+    this.axiosDefault = axios;
+    const self = this;
+
+    this.axiosRequestId = axios.interceptors.request.use(
+      async (config: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const url = self._resolveAxiosUrl(config);
+        const method = ((config.method as string | undefined) ?? "get").toUpperCase();
+        const headers = self._flattenHeaders(config.headers);
+
+        const { blocked, reasons } = await self._evaluateAndTrack(url, method, headers);
+        if (blocked) {
+          throw new Error(
+            `[Trusera] Policy violation: ${reasons.join(", ") || "Request denied"}`
+          );
+        }
+        return config;
+      }
+    );
+
+    this.axiosResponseId = axios.interceptors.response.use(
+      (response: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const url = self._resolveAxiosUrl(response.config);
+        const method = ((response.config?.method as string | undefined) ?? "get").toUpperCase();
+
+        if (!self.shouldExclude(url)) {
+          const event = createEvent(
+            EventType.API_CALL,
+            `${self.generateEventName(url, method)}.response`,
+            { method, url, status: response.status, status_text: response.statusText }
+          );
+          self.client?.track(event);
+        }
+        return response;
+      },
+      (error: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const config = error?.config;
+        if (config) {
+          const url = self._resolveAxiosUrl(config);
+          const method = ((config.method as string | undefined) ?? "get").toUpperCase();
+
+          if (!self.shouldExclude(url)) {
+            const event = createEvent(
+              EventType.API_CALL,
+              `${self.generateEventName(url, method)}.error`,
+              { method, url, error: (error as Error).message }
+            );
+            self.client?.track(event);
+          }
+        }
+        return Promise.reject(error as Error);
+      }
+    );
+
+    this.log("Axios interceptor installed");
+  }
+
+  private _uninstallAxios(): void {
+    if (this.axiosDefault) {
+      if (this.axiosRequestId !== null) {
+        this.axiosDefault.interceptors.request.eject(this.axiosRequestId);
+        this.axiosRequestId = null;
+      }
+      if (this.axiosResponseId !== null) {
+        this.axiosDefault.interceptors.response.eject(this.axiosResponseId);
+        this.axiosResponseId = null;
+      }
+      this.axiosDefault = null;
+    }
+  }
+
+  private _resolveAxiosUrl(config: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!config) return "";
+    const base: string = (config.baseURL as string | undefined) ?? "";
+    const url: string = (config.url as string | undefined) ?? "";
+    if (url.startsWith("http")) return url;
+    return base ? `${base.replace(/\/$/, "")}/${url.replace(/^\//, "")}` : url;
+  }
+
+  private _flattenHeaders(headers: any): Record<string, string> { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!headers) return {};
+    if (typeof headers.toJSON === "function") {
+      return headers.toJSON() as Record<string, string>;
+    }
+    const result: Record<string, string> = {};
+    for (const [k, v] of Object.entries(headers)) {
+      if (typeof v === "string") result[k] = v;
+    }
+    return result;
+  }
+
+  // ─── Undici interceptor ─────────────────────────────────────────────
+
+  private _installUndici(): void {
+    const undici = tryRequire("undici");
+    if (!undici) return;
+
+    this.undiciMod = undici;
+    const self = this;
+
+    // Patch undici.request
+    if (typeof undici.request === "function") {
+      this.origUndiciRequest = undici.request;
+      undici.request = async function interceptedUndiciRequest(
+        url: string | URL,
+        options?: Record<string, unknown>
+      ): Promise<unknown> {
+        const urlStr = typeof url === "string" ? url : url.href;
+        const method = ((options?.method as string | undefined) ?? "GET").toUpperCase();
+        const headers = self._flattenHeaders(options?.headers);
+
+        const { blocked, reasons } = await self._evaluateAndTrack(urlStr, method, headers);
+        if (blocked) {
+          throw new Error(
+            `[Trusera] Policy violation: ${reasons.join(", ") || "Request denied"}`
+          );
+        }
+
+        const result: any = await self.origUndiciRequest!.call(undici, url, options); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+        if (!self.shouldExclude(urlStr)) {
+          const event = createEvent(
+            EventType.API_CALL,
+            `${self.generateEventName(urlStr, method)}.response`,
+            { method, url: urlStr, status: result.statusCode }
+          );
+          self.client?.track(event);
+        }
+
+        return result;
+      };
+    }
+
+    // Patch undici.fetch
+    if (typeof undici.fetch === "function") {
+      this.origUndiciFetch = undici.fetch;
+      undici.fetch = async function interceptedUndiciFetch(
+        input: string | URL | Request,
+        init?: RequestInit
+      ): Promise<Response> {
+        const url = typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+        const method = (init?.method ?? "GET").toUpperCase();
+
+        if (self.shouldExclude(url)) {
+          return self.origUndiciFetch!.call(undici, input, init) as Promise<Response>;
+        }
+
+        const { blocked, reasons } = await self._evaluateAndTrack(url, method, {});
+        if (blocked) {
+          throw new Error(
+            `[Trusera] Policy violation: ${reasons.join(", ") || "Request denied"}`
+          );
+        }
+
+        const response = await self.origUndiciFetch!.call(undici, input, init) as Response;
+
+        const event = createEvent(
+          EventType.API_CALL,
+          `${self.generateEventName(url, method)}.response`,
+          { method, url, status: response.status }
+        );
+        self.client?.track(event);
+
+        return response;
+      };
+    }
+
+    this.log("Undici interceptor installed");
+  }
+
+  private _uninstallUndici(): void {
+    if (this.undiciMod) {
+      if (this.origUndiciRequest) {
+        this.undiciMod.request = this.origUndiciRequest;
+        this.origUndiciRequest = null;
+      }
+      if (this.origUndiciFetch) {
+        this.undiciMod.fetch = this.origUndiciFetch;
+        this.origUndiciFetch = null;
+      }
+      this.undiciMod = null;
+    }
+  }
+
+  // ─── Fetch interceptor (core) ───────────────────────────────────────
 
   /**
    * Creates the intercepted fetch function.
@@ -272,6 +551,8 @@ export class TruseraInterceptor {
       return response;
     };
   }
+
+  // ─── Shared utilities ───────────────────────────────────────────────
 
   /**
    * Checks if a URL should be excluded from interception.
