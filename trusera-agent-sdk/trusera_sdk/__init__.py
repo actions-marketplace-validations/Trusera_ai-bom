@@ -6,7 +6,7 @@ from .decorators import get_default_client, monitor, set_default_client
 from .events import Event, EventType
 from .standalone import RequestBlockedError, StandaloneInterceptor
 
-__version__ = "0.1.0"
+__version__ = "0.2.2"
 
 __all__ = [
     "TruseraClient",

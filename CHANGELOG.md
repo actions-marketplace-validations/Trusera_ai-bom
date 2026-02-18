@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-02-18
+
+### Added
+- **Callable Models Bridge**: Red-teaming integrations via Giskard with provider-agnostic callable interface
+- **CLI Telemetry**: Opt-in usage analytics with `--telemetry` / `--no-telemetry` flags and documentation
+- **JSON Schema Validation**: Output file validation for CycloneDX, SARIF, SPDX3 schemas (#26)
+- **Progress Spinner**: Visual feedback during parallel scanning
+- **GitHub Action Enhancements**: Policy gate annotations and severity filter (`--fail-on` in annotations)
+- **GitLab CI Template**: Severity filter and JSON fallback for non-SARIF pipelines
+- **VS Code Extension**: Packaged for marketplace (vscode-v0.1.0)
+- **n8n Community Node**: Finalized for npm registry (n8n-v0.4.4)
+
+### Changed
+- Updated dependency ranges: pytest (<10.0), pytest-cov (<8.0), watchdog (<7.0), pathspec (<2.0), mkdocstrings (<2.0)
+- README redesigned for better visual hierarchy and scannability
+- Animated demo GIF added to README
+
+### Fixed
+- Ruff format issues in callable test files and cli_reporter
+- Lint and typecheck errors in validator.py
+
 ## [0.2.0] - 2026-02-11 (n8n Community Node)
 
 ### Added
@@ -121,7 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker container distribution
 - Comprehensive test suite covering scanners and reporters
 
-[Unreleased]: https://github.com/trusera/ai-bom/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/trusera/ai-bom/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/trusera/ai-bom/compare/v3.1.1...v3.2.0
 [0.2.0]: https://github.com/trusera/ai-bom/compare/v3.0.0...v0.2.0
 [3.0.0]: https://github.com/trusera/ai-bom/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/trusera/ai-bom/compare/v0.1.0...v2.0.0
