@@ -4,7 +4,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/trusera-sdk.svg)](https://pypi.org/project/trusera-sdk/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Python SDK for monitoring AI agents with [Trusera](https://trusera.dev). Track LLM invocations, tool calls, data access, and more to ensure your AI agents are secure and compliant.
+Python SDK for monitoring **and intercepting** AI agent actions with [Trusera](https://trusera.dev). Track LLM invocations, tool calls, data access, and enforce Cedar security policies before actions execute.
 
 ## Installation
 
@@ -14,163 +14,205 @@ pip install trusera-sdk
 
 ### Optional Dependencies
 
-For framework-specific integrations:
-
 ```bash
-# LangChain integration
+# Framework integrations
 pip install trusera-sdk[langchain]
-
-# CrewAI integration
 pip install trusera-sdk[crewai]
-
-# AutoGen integration
 pip install trusera-sdk[autogen]
+
+# LLM client wrappers
+pip install trusera-sdk[openai]
+pip install trusera-sdk[anthropic]
+
+# Everything
+pip install trusera-sdk[all]
 
 # Development tools
 pip install trusera-sdk[dev]
 ```
 
-## Quick Start
+## Quick Start: Passive Monitoring
 
 ```python
 from trusera_sdk import TruseraClient, Event, EventType
 
-# Initialize the client
 client = TruseraClient(api_key="tsk_your_api_key")
+agent_id = client.register_agent(name="my-agent", framework="custom")
 
-# Register your agent
-agent_id = client.register_agent(
-    name="my-agent",
-    framework="custom",
-    metadata={"version": "1.0.0"}
-)
-
-# Track events
 client.track(Event(
     type=EventType.TOOL_CALL,
     name="web_search",
     payload={"query": "latest AI news"},
-    metadata={"duration_ms": 250}
 ))
 
-# Events are automatically flushed in batches
-# Manual flush if needed
-client.flush()
-
-# Clean up
 client.close()
 ```
 
-## Using the Decorator
+## Active Interception (v0.3.0+)
 
-The `@monitor` decorator automatically tracks function calls:
+The SDK now supports **active interception** - evaluating agent actions against Cedar policies *before* they execute. Use `intercept()` for a one-liner setup, or `TruseraInterceptor` for full control.
+
+### `intercept()` - One-Liner Setup
+
+```python
+import trusera_sdk
+
+client = trusera_sdk.TruseraClient(api_key="tsk_...")
+client.register_agent("my-agent", "custom")
+
+# Intercept all HTTP calls (requests, httpx, urllib3)
+interceptor = trusera_sdk.intercept(client, enforcement="block")
+
+# Your agent code runs normally - policy violations raise PolicyViolationError
+import requests
+requests.get("https://allowed-api.com/data")  # OK
+requests.get("https://blocked-api.com/data")  # Raises PolicyViolationError
+
+interceptor.uninstall()
+```
+
+### `TruseraInterceptor` - Full Control
+
+```python
+from trusera_sdk import TruseraClient, TruseraInterceptor
+from trusera_sdk.policy_cache import PolicyCache
+
+client = TruseraClient(api_key="tsk_...")
+cache = PolicyCache(client=client, refresh_interval=30)
+
+with TruseraInterceptor(client=client, policy_cache=cache, enforcement="warn") as i:
+    # All outbound HTTP is evaluated against Cedar policies
+    # Warn mode logs violations but allows requests to proceed
+    pass
+```
+
+### Enforcement Modes
+
+| Mode | Behavior |
+|------|----------|
+| `block` | Raise `PolicyViolationError` and prevent the action |
+| `warn` | Log a warning to stderr, allow the action |
+| `log` | Silently record the violation, allow the action |
+
+## Using the Decorator
 
 ```python
 from trusera_sdk import TruseraClient, monitor, set_default_client, EventType
 
-# Set up client
 client = TruseraClient(api_key="tsk_your_api_key")
 client.register_agent("my-agent", "custom")
 set_default_client(client)
 
-# Decorate your functions
 @monitor(event_type=EventType.TOOL_CALL)
 def search_database(query: str) -> list[dict]:
-    # Your implementation
     return [{"id": 1, "title": "Result"}]
 
 @monitor(event_type=EventType.LLM_INVOKE, name="gpt4_call")
 async def call_llm(prompt: str) -> str:
-    # Works with async functions too
     return "AI response"
-
-# Function calls are automatically tracked
-results = search_database("user query")
-response = await call_llm("What is AI?")
 ```
 
 ## Framework Integrations
 
-### LangChain
+### LangChain (Active Interception)
 
 ```python
-from langchain.llms import OpenAI
-from langchain.agents import initialize_agent, Tool
 from trusera_sdk import TruseraClient
+from trusera_sdk.policy_cache import PolicyCache
+from trusera_sdk.integrations.langchain_interceptor import TruseraLangChainInterceptor
+
+client = TruseraClient(api_key="tsk_...")
+cache = PolicyCache(client=client)
+
+with TruseraLangChainInterceptor(client=client, policy_cache=cache, enforcement="block"):
+    # BaseTool._run and BaseLLM._generate are now policy-checked
+    agent.run("Your query here")
+```
+
+### LangChain (Passive Monitoring)
+
+```python
 from trusera_sdk.integrations.langchain import TruseraCallbackHandler
 
-# Initialize Trusera
-client = TruseraClient(api_key="tsk_your_api_key")
-client.register_agent("langchain-agent", "langchain")
 handler = TruseraCallbackHandler(client)
-
-# Use with LangChain
 llm = OpenAI(callbacks=[handler])
-agent = initialize_agent(
-    tools=[...],
-    llm=llm,
-    callbacks=[handler]
-)
-
-# All LLM calls and tool usage are tracked
-agent.run("Your query here")
 ```
 
-### CrewAI
+### CrewAI (Active Interception)
 
 ```python
-from crewai import Crew, Agent, Task
-from trusera_sdk import TruseraClient
-from trusera_sdk.integrations.crewai import TruseraCrewCallback
+from trusera_sdk.integrations.crewai_interceptor import TruseraCrewAIInterceptor
 
-# Initialize Trusera
-client = TruseraClient(api_key="tsk_your_api_key")
-client.register_agent("crew-agent", "crewai")
-callback = TruseraCrewCallback(client)
-
-# Create your crew
-researcher = Agent(role="Researcher", goal="Research topics")
-task = Task(description="Research AI trends", agent=researcher)
-
-crew = Crew(
-    agents=[researcher],
-    tasks=[task],
-    step_callback=callback.step_callback
-)
-
-# Execute with tracking
-result = crew.kickoff()
+with TruseraCrewAIInterceptor(client=client, policy_cache=cache, enforcement="warn"):
+    crew.kickoff()
 ```
 
-### AutoGen
+### AutoGen (Active Interception)
 
 ```python
-import autogen
-from trusera_sdk import TruseraClient
-from trusera_sdk.integrations.autogen import TruseraAutoGenHook
+from trusera_sdk.integrations.autogen_interceptor import TruseraAutoGenInterceptor
 
-# Initialize Trusera
-client = TruseraClient(api_key="tsk_your_api_key")
-client.register_agent("autogen-agent", "autogen")
-hook = TruseraAutoGenHook(client)
+interceptor = TruseraAutoGenInterceptor(client=client, policy_cache=cache, enforcement="block")
+interceptor.install()
 
-# Create AutoGen agents
-assistant = autogen.AssistantAgent(
-    name="assistant",
-    llm_config={"model": "gpt-4"}
+# Optionally wrap individual agent functions
+interceptor.intercept_agent(my_agent)
+```
+
+### OpenAI / Anthropic (LLM Interceptor)
+
+```python
+from openai import OpenAI
+from trusera_sdk.integrations.llm_interceptor import TruseraLLMInterceptor
+
+llm_interceptor = TruseraLLMInterceptor(
+    client=trusera_client,
+    policy_cache=cache,
+    enforcement="warn",
+    redact_pii=True,  # Redact emails, phones, SSNs from logged prompts
 )
 
-# Register hook
-hook.setup_agent(assistant)
+openai_client = OpenAI()
+llm_interceptor.wrap_openai(openai_client)
 
-# All interactions are tracked
-user_proxy = autogen.UserProxyAgent(name="user")
-user_proxy.initiate_chat(assistant, message="Hello")
+# Tool-use calls in responses are now policy-checked
+# PII is redacted from logged prompts (never from actual API calls)
+```
+
+## Policy Cache
+
+The `PolicyCache` fetches Cedar policies from the Trusera API and evaluates them locally (<1ms). It runs a background thread to keep policies fresh.
+
+```python
+from trusera_sdk.policy_cache import PolicyCache
+
+cache = PolicyCache(
+    client=trusera_client,
+    refresh_interval=60,   # Seconds between refreshes (default: 60)
+    stale_ttl=300,         # Serve stale policies for this long when API is down (default: 300)
+)
+
+# Manual cache invalidation (e.g. on webhook)
+cache.invalidate()
+
+# Clean shutdown
+cache.stop()
+```
+
+## PII Redaction
+
+```python
+from trusera_sdk import PIIRedactor
+
+redactor = PIIRedactor()
+redactor.redact_text("Email: john@example.com")
+# => "Email: [REDACTED_EMAIL]"
+
+redactor.redact({"user": "john@example.com", "age": 30})
+# => {"user": "[REDACTED_EMAIL]", "age": 30}
 ```
 
 ## Event Types
-
-The SDK supports tracking various types of agent activities:
 
 - `EventType.TOOL_CALL` - Tool or function invocations
 - `EventType.LLM_INVOKE` - LLM API calls
@@ -178,89 +220,56 @@ The SDK supports tracking various types of agent activities:
 - `EventType.API_CALL` - External API requests
 - `EventType.FILE_WRITE` - File system modifications
 - `EventType.DECISION` - Agent decision points
+- `EventType.POLICY_VIOLATION` - Cedar policy violations (new in 0.3.0)
+- `EventType.INTERCEPTION` - Intercepted HTTP requests (new in 0.3.0)
+
+## Migration from v0.2 to v0.3
+
+v0.3.0 is fully backward compatible. All existing `monitor()`, `TruseraClient`, and `StandaloneInterceptor` APIs work unchanged.
+
+**New in v0.3.0:**
+- `TruseraInterceptor` - Multi-library HTTP interceptor (requests + httpx + urllib3)
+- `intercept()` - One-liner convenience function
+- `PolicyCache` - Background-refreshing policy cache
+- `PolicyViolationError` - Typed exception for blocked actions
+- `EnforcementMode` - Enum for block/warn/log
+- `PIIRedactor` - PII detection and redaction
+- Framework interceptors: LangChain, CrewAI, AutoGen, OpenAI/Anthropic
+- New event types: `POLICY_VIOLATION`, `INTERCEPTION`
 
 ## Configuration
-
-### Client Options
 
 ```python
 client = TruseraClient(
     api_key="tsk_your_api_key",
-    base_url="https://api.trusera.dev",  # Optional, defaults to production
-    flush_interval=5.0,                    # Seconds between auto-flushes
-    batch_size=100,                        # Events per batch
-    timeout=10.0                           # HTTP request timeout
+    base_url="https://api.trusera.dev",
+    flush_interval=5.0,
+    batch_size=100,
+    timeout=10.0,
 )
-```
-
-### Context Manager
-
-Use the client as a context manager for automatic cleanup:
-
-```python
-with TruseraClient(api_key="tsk_your_api_key") as client:
-    client.register_agent("my-agent", "custom")
-    # ... track events ...
-# Automatically flushed and closed
-```
-
-## Best Practices
-
-1. **Use Context Manager**: Ensures events are flushed on exit
-2. **Set Agent ID Early**: Call `register_agent()` or `set_agent_id()` before tracking
-3. **Batch Operations**: Let the SDK handle batching automatically
-4. **Sensitive Data**: Use `capture_args=False` in `@monitor` for sensitive functions
-5. **Error Handling**: The SDK logs errors but won't crash your application
-
-## Environment Variables
-
-```bash
-# Optional: Set default API key
-export TRUSERA_API_KEY=tsk_your_api_key
-
-# Optional: Custom API endpoint
-export TRUSERA_API_URL=https://api.trusera.dev
 ```
 
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/Trusera/trusera-agent-sdk.git
-cd trusera-agent-sdk
-
-# Install development dependencies
+git clone https://github.com/Trusera/ai-bom.git
+cd ai-bom/trusera-agent-sdk
 pip install -e ".[dev]"
-
-# Run tests
 pytest
-
-# Run linter
 ruff check .
-
-# Type checking
-mypy trusera_sdk
 ```
 
 ## Documentation
 
-Full documentation is available at [docs.trusera.dev/sdk/python](https://docs.trusera.dev/sdk/python)
+Full documentation at [docs.trusera.dev/sdk/python](https://docs.trusera.dev/sdk/python)
 
 ## Support
 
 - Website: [trusera.dev](https://trusera.dev)
 - Documentation: [docs.trusera.dev](https://docs.trusera.dev)
-- Issues: [GitHub Issues](https://github.com/Trusera/trusera-agent-sdk/issues)
+- Issues: [GitHub Issues](https://github.com/Trusera/ai-bom/issues)
 - Email: dev@trusera.dev
 
 ## License
 
 Apache License 2.0 - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
----
-
-Built with care by the Trusera team. Making AI agents secure and trustworthy.
