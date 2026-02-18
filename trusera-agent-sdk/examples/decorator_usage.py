@@ -5,7 +5,6 @@ import time
 
 from trusera_sdk import EventType, TruseraClient, monitor, set_default_client
 
-
 # Initialize client
 client = TruseraClient(api_key="tsk_your_api_key_here")
 client.register_agent("decorator-demo", "custom")
