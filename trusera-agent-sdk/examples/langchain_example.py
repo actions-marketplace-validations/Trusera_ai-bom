@@ -5,8 +5,6 @@ This example requires langchain-core to be installed:
 """
 
 try:
-    from langchain_core.callbacks import BaseCallbackHandler
-    from langchain_core.messages import HumanMessage, SystemMessage
     from trusera_sdk import TruseraClient
     from trusera_sdk.integrations.langchain import TruseraCallbackHandler
 
@@ -28,8 +26,8 @@ def main() -> None:
     agent_id = client.register_agent("langchain-demo", "langchain")
     print(f"Registered agent: {agent_id}\n")
 
-    # Create callback handler
-    handler = TruseraCallbackHandler(client)
+    # Create callback handler (used in real integrations)
+    TruseraCallbackHandler(client)
 
     # Example: Using with LangChain's ChatOpenAI (conceptual)
     print("In a real scenario, you would use the handler with LangChain:")

@@ -2,7 +2,8 @@
 
 import asyncio
 import time
-from trusera_sdk import TruseraClient, monitor, set_default_client, EventType
+
+from trusera_sdk import EventType, TruseraClient, monitor, set_default_client
 
 
 # Initialize client
