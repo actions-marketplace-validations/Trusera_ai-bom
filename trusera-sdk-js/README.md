@@ -1,5 +1,7 @@
 # Trusera SDK for JavaScript/TypeScript
 
+> **Beta** — This SDK is under active development. Expected GA: April 2026.
+
 [![npm version](https://badge.fury.io/js/trusera-sdk.svg)](https://www.npmjs.com/package/trusera-sdk)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 

@@ -52,9 +52,9 @@ ai-bom/
 | Package | Directory | Registry | Current Version | Install |
 |---------|-----------|----------|----------------|---------|
 | **ai-bom** | `src/ai_bom/` | PyPI | 3.3.2 | `pip install ai-bom` |
-| **trusera-sdk** (Python) | `trusera-agent-sdk/` | PyPI | 0.2.2 | `pip install trusera-sdk` |
-| **trusera-sdk** (JS) | `trusera-sdk-js/` | npm | 0.1.0 | `npm install trusera-sdk` |
-| **trusera-sdk-go** | `trusera-sdk-go/` | Go modules | 0.1.0 | `go get github.com/Trusera/ai-bom/trusera-sdk-go` |
+| **trusera-sdk** (Python) | `trusera-agent-sdk/` | PyPI | 1.0.0 (Stable) | `pip install trusera-sdk` |
+| **trusera-sdk** (JS) | `trusera-sdk-js/` | npm | 0.2.0 (Beta) | `npm install trusera-sdk` |
+| **trusera-sdk-go** | `trusera-sdk-go/` | Go modules | 0.1.0 (Beta) | `go get github.com/Trusera/ai-bom/trusera-sdk-go` |
 | **n8n-nodes-trusera** | `n8n-node/` | npm | 0.5.0 | Install via n8n community nodes |
 | **ai-bom-scanner** (VS Code) | `vscode-extension/` | VS Code Marketplace | 0.1.0 | Search "ai-bom" in Extensions |
 
@@ -80,8 +80,8 @@ Each package has its own tag prefix. The auto-release workflow uses these to tra
 | Package | Tag format | Example |
 |---------|-----------|---------|
 | ai-bom | `v*` | `v3.3.2` |
-| trusera-sdk (Python) | `sdk-v*` | `sdk-v0.2.2` |
-| trusera-sdk (JS) | `js-v*` | `js-v0.1.0` |
+| trusera-sdk (Python) | `sdk-v*` | `sdk-v1.0.0` |
+| trusera-sdk (JS) | `js-v*` | `js-v0.2.0` |
 | trusera-sdk-go | `trusera-sdk-go/v*` | `trusera-sdk-go/v0.1.0` |
 | n8n-nodes-trusera | `n8n-v*` | `n8n-v0.5.0` |
 | VS Code extension | `vscode-v*` | `vscode-v0.1.0` |

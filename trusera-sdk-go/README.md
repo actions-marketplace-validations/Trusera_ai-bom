@@ -1,5 +1,7 @@
 # trusera-sdk-go
 
+> **Beta** — This SDK is under active development. Expected GA: April 2026.
+
 Go SDK for monitoring AI agents with Trusera's Cedar-based policy engine.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/Trusera/ai-bom/trusera-sdk-go.svg)](https://pkg.go.dev/github.com/Trusera/ai-bom/trusera-sdk-go)
